@@ -19,7 +19,9 @@ Upload guide (Arabic): [`DEPLOY.md`](DEPLOY.md) — shared/free PHP hosting via 
 
 ## Versions
 - **v1** — `/`: the original demo (single review, no login). Unchanged by v2.
-- **v2** — `/v2`: company website (AR/EN: home, about, services, projects, contact), public submittal
+- **v2** — `/v2`: study requests go through the per-type forms at `/v2/studies` (the older "send a file"
+  submittal form is off unless `V2_FILE_SUBMIT=true`); the home banner's photos are uploaded under
+  *Company profile → Banner slides*; the control centre at `/v2/admin` is Arabic/English with a light/dark theme. Also: company website (AR/EN: home, about, services, projects, contact), public submittal
   form with tracking codes, and an admin dashboard at `/v2/admin` (submissions, files, the same analysis
   tool per submission, issue + email the PDF, contact inbox, content editing, CSV export). Uses a
   database (SQLite by default, created on the first request; MySQL/Postgres via `DB_URL`).

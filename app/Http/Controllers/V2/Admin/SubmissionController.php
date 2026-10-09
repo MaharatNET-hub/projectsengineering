@@ -110,7 +110,7 @@ class SubmissionController extends Controller
         $submission->update(['assigned_to' => $user?->id]);
         Activity::log($submission, 'submission.assigned', $user ? "to {$user->name}" : 'unassigned');
 
-        return back()->with('ok', $user ? "Assigned to {$user->name}." : 'Unassigned.');
+        return back()->with('ok', $user ? __('Assigned to :name.', ['name' => $user->name]) : __('Unassigned.'));
     }
 
     /**
@@ -143,7 +143,7 @@ class SubmissionController extends Controller
             Activity::log($submission, 'status.' . $data['status'], 'changed by hand');
         }
 
-        return back()->with('ok', 'Status updated.');
+        return back()->with('ok', __('Status updated.'));
     }
 
     public function destroy(Submission $submission)
@@ -152,7 +152,7 @@ class SubmissionController extends Controller
         $code = $submission->code;
         $submission->delete();
 
-        return redirect()->route('v2.admin.submissions')->with('ok', "Submission $code and its files were deleted.");
+        return redirect()->route('v2.admin.submissions')->with('ok', __('Submission :code and its files were deleted.', ['code' => $code]));
     }
 
     public function original(Submission $submission)
@@ -187,10 +187,10 @@ class SubmissionController extends Controller
 
         $data = $r->validate(['note' => 'nullable|string|max:3000', 'to' => 'nullable|email', 'letter_subject' => 'nullable|string|max:255', 'letter_body' => 'nullable|string|max:8000']);
         if (! $submission->outputPath()) {
-            return back()->with('bad', 'Generate the reviewed PDF first.');
+            return back()->with('bad', __('Generate the reviewed PDF first.'));
         }
         if (! ($submission->review()['final'] ?? false)) {
-            return back()->with('bad', 'The review is still a draft: open the analysis and press "Approve & generate" first.');
+            return back()->with('bad', __('The review is still a draft: open the analysis and press "Approve & generate" first.'));
         }
         $to = ($data['to'] ?? null) ?: $submission->client_email;
         try {
@@ -200,14 +200,14 @@ class SubmissionController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->with('bad', 'Email failed: ' . $e->getMessage());
+            return back()->with('bad', __('Email failed: :error', ['error' => $e->getMessage()]));
         }
         $submission->update(['emailed_at' => now(), 'status' => 'issued', 'issued_at' => $submission->issued_at ?? now()]);
         Activity::log($submission, 'review.emailed', "to $to" . ($mail->attached ? ' · PDF attached' : ' · download link'));
         $logOnly = in_array(config('mail.default'), ['log', 'array'], true);
 
         return back()->with($logOnly ? 'bad' : 'ok', $logOnly
-            ? "No mail server is configured (MAIL_MAILER=" . config('mail.default') . "): the email to $to was written to storage/logs/mail.log instead of being sent. Set the SMTP settings in .env."
-            : "Review emailed to $to.");
+            ? __('No mail server is configured (MAIL_MAILER=:mailer): the email to :to was written to storage/logs/mail.log instead of being sent. Set the SMTP settings in .env.', ['mailer' => config('mail.default'), 'to' => $to])
+            : __('Review emailed to :to.', ['to' => $to]));
     }
 }

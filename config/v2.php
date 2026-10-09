@@ -9,6 +9,10 @@ return [
     // public site language: ar or en
     'locale' => env('V2_LOCALE', 'ar'),
 
+    // the public "send a file" (submittal upload) form. Off: the site takes study requests through the
+    // per-type forms at /v2/studies only, and /v2/submit redirects there.
+    'file_submit' => (bool) env('V2_FILE_SUBMIT', false),
+
     // largest submittal accepted from the public form (MB)
     'max_upload_mb' => (int) env('V2_MAX_UPLOAD_MB', 100),
 

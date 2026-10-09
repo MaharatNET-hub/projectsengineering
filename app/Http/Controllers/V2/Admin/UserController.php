@@ -27,7 +27,7 @@ class UserController extends Controller
         ]);
         User::create($data + ['active' => true]);
 
-        return back()->with('ok', "{$data['name']} can now log in at " . route('v2.admin.login') . ' with the password you chose.');
+        return back()->with('ok', __(':name can now log in at :url with the password you chose.', ['name' => $data['name'], 'url' => route('v2.admin.login')]));
     }
 
     public function update(Request $r, User $user)
@@ -39,7 +39,7 @@ class UserController extends Controller
         $active = (bool) ($data['active'] ?? false);
         // never lock the last way in: you cannot demote or deactivate yourself
         if ($user->is($r->user()) && ($data['role'] !== 'admin' || ! $active)) {
-            return back()->with('bad', 'You cannot remove your own admin role or deactivate yourself.');
+            return back()->with('bad', __('You cannot remove your own admin role or deactivate yourself.'));
         }
         $user->fill(['name' => $data['name'], 'role' => $data['role'], 'active' => $active, 'title' => $data['title'] ?? null]);
         if (! empty($data['password'])) {
@@ -50,6 +50,6 @@ class UserController extends Controller
             Study::where('assigned_to', $user->id)->whereIn('status', ['submitted', 'review'])->update(['assigned_to' => null]);
         }
 
-        return back()->with('ok', "{$user->name} updated." . (! $active ? ' Their open studies are unassigned.' : ''));
+        return back()->with('ok', __(':name updated.', ['name' => $user->name]) . (! $active ? ' ' . __('Their open studies are unassigned.') : ''));
     }
 }

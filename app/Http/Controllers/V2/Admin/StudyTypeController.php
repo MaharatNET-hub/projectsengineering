@@ -23,9 +23,9 @@ class StudyTypeController extends Controller
         $data = $r->validate([
             'key' => ['required', 'string', 'max:40', 'regex:/^[a-z][a-z0-9_]*$/'], 'name_en' => 'required|string|max:120', 'name_ar' => 'required|string|max:120',
             'discipline' => 'required|in:Electrical,Mechanical,Plumbing,Fire,Other', 'from' => 'nullable|string',
-        ], ['key.regex' => 'The key uses lower-case letters, digits and _ (e.g. lighting_study).']);
+        ], ['key.regex' => __('The key uses lower-case letters, digits and _ (e.g. lighting_study).')]);
         if (StudyTypes::find($data['key'])) {
-            return back()->withInput()->with('bad', "A study type \"{$data['key']}\" already exists.");
+            return back()->withInput()->with('bad', __('A study type ":key" already exists.', ['key' => $data['key']]));
         }
         $name = ['en' => $data['name_en'], 'ar' => $data['name_ar']];
         if (! empty($data['from']) && ($src = StudyTypes::find($data['from']))) {
@@ -35,7 +35,7 @@ class StudyTypeController extends Controller
         }
         StudyTypes::save($data['key'], $def);
 
-        return redirect()->route('v2.admin.study-types.edit', $data['key'])->with('ok', 'Study type created. Add its fields and rules, then save — it is on the public form right away.');
+        return redirect()->route('v2.admin.study-types.edit', $data['key'])->with('ok', __('Study type created. Add its fields and rules, then save — it is on the public form right away.'));
     }
 
     public function edit(string $type)
@@ -55,7 +55,7 @@ class StudyTypeController extends Controller
         $r->validate(['json' => 'required|string|max:500000']);
         $def = json_decode($r->input('json'), true);
         if (! is_array($def)) {
-            return back()->withInput()->with('bad', 'Not valid JSON: ' . json_last_error_msg());
+            return back()->withInput()->with('bad', __('Not valid JSON: :error', ['error' => json_last_error_msg()]));
         }
         if ($problems = StudyTypes::problems($def)) {
             return back()->withInput()->with('bad', implode(' ', array_slice($problems, 0, 6)));
@@ -63,7 +63,7 @@ class StudyTypeController extends Controller
         $def['version'] = (int) ($def['version'] ?? 1);
         StudyTypes::save($type, $def);
 
-        return redirect()->route('v2.admin.study-types.edit', $type)->with('ok', 'Saved. New studies use it now; press "Run the rules again" on an existing study to apply it there.');
+        return redirect()->route('v2.admin.study-types.edit', $type)->with('ok', __('Saved. New studies use it now; press "Run the rules again" on an existing study to apply it there.'));
     }
 
     /** Shipped type: back to its definition. Created type: deleted (only while no study uses it). */
@@ -71,14 +71,14 @@ class StudyTypeController extends Controller
     {
         if (StudyTypes::isCustom($type)) {
             if (Study::where('type', $type)->exists()) {
-                return back()->with('bad', 'Studies of this type exist, so it cannot be deleted.');
+                return back()->with('bad', __('Studies of this type exist, so it cannot be deleted.'));
             }
             StudyTypes::reset($type);
 
-            return redirect()->route('v2.admin.study-types')->with('ok', 'Study type deleted.');
+            return redirect()->route('v2.admin.study-types')->with('ok', __('Study type deleted.'));
         }
         StudyTypes::reset($type);
 
-        return redirect()->route('v2.admin.study-types.edit', $type)->with('ok', 'Back to the shipped definition.');
+        return redirect()->route('v2.admin.study-types.edit', $type)->with('ok', __('Back to the shipped definition.'));
     }
 }

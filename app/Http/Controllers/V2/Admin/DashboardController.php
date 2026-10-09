@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\V2\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\V2\Activity;
+use App\Models\V2\Client;
 use App\Models\V2\Message;
+use App\Models\V2\Study;
 use App\Models\V2\Submission;
 
 class DashboardController extends Controller
@@ -15,32 +18,34 @@ class DashboardController extends Controller
         if (! $me->isAdmin()) {
             return $this->engineer($me);
         }
-        $all = Submission::query();
-        $issued = Submission::whereNotNull('issued_at')->get(['created_at', 'issued_at']);
-        $hours = $issued->map(fn ($s) => $s->created_at->diffInMinutes($s->issued_at) / 60);
 
-        // submissions per week, last 8 weeks (oldest first)
+        // studies per week, last 8 weeks (oldest first)
         $weeks = [];
         for ($i = 7; $i >= 0; $i--) {
             $start = now()->startOfWeek()->subWeeks($i);
-            $weeks[] = ['label' => $start->format('d M'), 'count' => Submission::whereBetween('created_at', [$start, (clone $start)->endOfWeek()])->count()];
+            $weeks[] = ['label' => $start->translatedFormat('d M'), 'count' => Study::whereBetween('created_at', [$start, (clone $start)->endOfWeek()])->count()];
         }
-        $decisions = Submission::whereNotNull('decision')->where('status', 'issued')->selectRaw('decision, count(*) as n')->groupBy('decision')->orderByDesc('n')->pluck('n', 'decision');
+        $decisions = Study::whereNotNull('decision')->where('status', 'issued')->selectRaw('decision, count(*) as n')->groupBy('decision')->orderByDesc('n')->pluck('n', 'decision');
+        $issued = Study::whereNotNull('issued_at')->get(['created_at', 'issued_at']);
+        $hours = $issued->map(fn ($s) => $s->created_at->diffInMinutes($s->issued_at) / 60);
 
         return view('v2.admin.dashboard', [
             'kpi' => [
-                'total' => (clone $all)->count(),
-                'waiting' => Submission::whereIn('status', ['received', 'analysing', 'review'])->count(),
-                'issuedMonth' => Submission::where('issued_at', '>=', now()->startOfMonth())->count(),
-                'turnaround' => $hours->count() ? $hours->avg() : null,
+                'waiting' => Study::where('status', 'submitted')->count(),
+                'review' => Study::where('status', 'review')->count(),
+                'issuedMonth' => Study::where('issued_at', '>=', now()->startOfMonth())->count(),
+                'total' => Study::count(),
+                'clients' => Client::count(),
                 'unread' => Message::whereNull('read_at')->count(),
+                'engineers' => User::where('active', true)->count(),
+                'unassigned' => Study::whereIn('status', ['submitted', 'review'])->whereNull('assigned_to')->count(),
+                'submissions' => Submission::whereIn('status', ['received', 'analysing', 'review'])->count(),
+                'turnaround' => $hours->count() ? $hours->avg() : null,
             ],
             'weeks' => $weeks,
             'decisions' => $decisions,
-            'queue' => Submission::whereIn('status', ['received', 'analysing', 'review'])->oldest()->take(6)->get(),
-            'recent' => Submission::latest()->take(8)->get(),
+            'recent' => Study::with('assignee')->latest()->take(8)->get(),
             'activity' => Activity::with('submission', 'study', 'user')->latest()->take(10)->get(),
-            'messages' => Message::latest()->take(4)->get(),
         ]);
     }
 
@@ -53,9 +58,10 @@ class DashboardController extends Controller
         return view('v2.admin.dashboard-engineer', [
             'mine' => Submission::with('category')->where('assigned_to', $me->id)->whereIn('status', $open)->oldest()->get(),
             'free' => Submission::with('category')->whereNull('assigned_to')->whereIn('category_id', $cats->pluck('id'))->whereIn('status', $open)->oldest()->get(),
-            'studies' => \App\Models\V2\Study::where('assigned_to', $me->id)->whereIn('status', ['submitted', 'review'])->oldest()->get(),
+            'studies' => Study::where('assigned_to', $me->id)->whereIn('status', ['submitted', 'review'])->oldest()->get(),
+            'openStudies' => Study::whereNull('assigned_to')->whereIn('status', ['submitted', 'review'])->oldest()->take(10)->get(),
             'issuedMonth' => Submission::where('assigned_to', $me->id)->where('issued_at', '>=', now()->startOfMonth())->count()
-                + \App\Models\V2\Study::where('assigned_to', $me->id)->where('issued_at', '>=', now()->startOfMonth())->count(),
+                + Study::where('assigned_to', $me->id)->where('issued_at', '>=', now()->startOfMonth())->count(),
             'categories' => $cats,
         ]);
     }

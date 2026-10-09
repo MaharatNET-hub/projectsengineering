@@ -20,7 +20,10 @@ class SiteController extends Controller
     {
         $projects = Project::where('active', true)->orderByDesc('featured')->orderBy('sort')->take(3)->get();
 
-        return view('v2.site.home', ['services' => $this->activeServices(), 'projects' => $projects, 'stats' => Site::stats()]);
+        return view('v2.site.home', [
+            'services' => $this->activeServices(), 'projects' => $projects, 'stats' => Site::stats(),
+            'slides' => Site::slides(), 'types' => array_slice(\App\Studies\StudyTypes::all(), 0, 6, true),
+        ]);
     }
 
     public function about()
@@ -74,10 +77,10 @@ class SiteController extends Controller
         return redirect()->route('v2.contact')->with('sent', true);
     }
 
-    /** Project images uploaded from the dashboard (served without needing storage:link). */
+    /** Project images and banner slides uploaded from the dashboard (served without needing storage:link). */
     public function media(string $path)
     {
-        abort_unless(preg_match('#^v2/projects/[A-Za-z0-9._-]+$#', $path), 404);
+        abort_unless(preg_match('#^v2/(projects|slides)/[A-Za-z0-9._-]+$#', $path), 404);
         $f = storage_path('app/public/' . $path);
         abort_unless(is_file($f), 404);
 

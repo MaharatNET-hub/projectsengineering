@@ -68,7 +68,7 @@ class StudyController extends Controller
         $study->update(['assigned_to' => $user?->id, 'engineer' => $user?->name ?? $study->engineer]);
         Activity::forStudy($study, 'study.assigned', $user ? "to {$user->name}" : 'unassigned');
 
-        return back()->with('ok', $user ? "Assigned to {$user->name}." : 'Unassigned.');
+        return back()->with('ok', $user ? __('Assigned to :name.', ['name' => $user->name]) : __('Unassigned.'));
     }
 
     /** Save the engineer's edits; "issue" also makes the review final for the client. */
@@ -116,7 +116,7 @@ class StudyController extends Controller
         $study->finding_count = count($study->keptFindings());
         if (($data['action'] ?? 'save') === 'issue') {
             if (! $study->decision) {
-                return back()->withInput()->with('bad', 'Choose the action (decision) before issuing.');
+                return back()->withInput()->with('bad', __('Choose the action (decision) before issuing.'));
             }
             $study->status = 'issued';
             $study->issued_at ??= now();
@@ -141,7 +141,7 @@ class StudyController extends Controller
             Activity::forStudy($study, 'study.edited', "$kept finding(s) kept" . ($study->decision ? ' · ' . __('studies.decision.' . $study->decision, [], 'en') : ''));
         }
 
-        return back()->with('ok', $study->isIssued() ? 'Saved. The review is issued: the client sees it on the tracking page.' : 'Saved.');
+        return back()->with('ok', $study->isIssued() ? __('Saved. The review is issued: the client sees it on the tracking page.') : __('Saved.'));
     }
 
     public function reanalyse(Study $study)
@@ -151,7 +151,7 @@ class StudyController extends Controller
         Activity::forStudy($study, 'study.reanalysed', count($study->keptFindings()) . ' finding(s)');
         Studies::report($study);
 
-        return back()->with('ok', 'The rules were run again with the current study-type definition (your edits to matching findings were kept).');
+        return back()->with('ok', __('The rules were run again with the current study-type definition (your edits to matching findings were kept).'));
     }
 
     public function file(Study $study)
@@ -173,7 +173,7 @@ class StudyController extends Controller
     {
         $data = $r->validate(['note' => 'nullable|string|max:3000', 'to' => 'nullable|email']);
         if (! $study->isIssued()) {
-            return back()->with('bad', 'Issue the review first.');
+            return back()->with('bad', __('Issue the review first.'));
         }
         Studies::report($study);
         $to = ($data['to'] ?? null) ?: $study->client_email;
@@ -182,15 +182,15 @@ class StudyController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->with('bad', 'Email failed: ' . $e->getMessage());
+            return back()->with('bad', __('Email failed: :error', ['error' => $e->getMessage()]));
         }
         $study->update(['emailed_at' => now()]);
         Activity::forStudy($study, 'study.emailed', "to $to");
         $logOnly = in_array(config('mail.default'), ['log', 'array'], true);
 
         return back()->with($logOnly ? 'bad' : 'ok', $logOnly
-            ? 'No mail server is configured (MAIL_MAILER=' . config('mail.default') . "): the email to $to was written to the log instead of being sent."
-            : "Review emailed to $to.");
+            ? __('No mail server is configured (MAIL_MAILER=:mailer): the email to :to was written to the log instead of being sent.', ['mailer' => config('mail.default'), 'to' => $to])
+            : __('Review emailed to :to.', ['to' => $to]));
     }
 
     public function destroy(Study $study)
@@ -198,6 +198,6 @@ class StudyController extends Controller
         $code = $study->code;
         $study->delete();
 
-        return redirect()->route('v2.admin.studies')->with('ok', "Study $code and its files were deleted.");
+        return redirect()->route('v2.admin.studies')->with('ok', __('Study :code and its files were deleted.', ['code' => $code]));
     }
 }
