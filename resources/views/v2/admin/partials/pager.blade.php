@@ -1,5 +1,5 @@
 @if ($paginator->hasPages())
-<nav class="pager">
+<nav class="pager" aria-label="{{ __('Pagination') }}">
   @if ($paginator->onFirstPage())<span class="mute">‹</span>@else<a href="{{ $paginator->previousPageUrl() }}">‹</a>@endif
   @foreach ($elements as $el)
     @if (is_string($el))<span class="mute">{{ $el }}</span>@endif

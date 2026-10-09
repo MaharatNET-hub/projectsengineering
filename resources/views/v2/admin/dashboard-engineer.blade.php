@@ -1,60 +1,77 @@
-@extends('v2.layouts.admin', ['title' => 'My requests'])
+@extends('v2.layouts.admin', ['title' => __('Home'), 'icon' => 'home', 'subtitle' => __('What is waiting for you, and what you can take next.')])
 @section('content')
-<div class="kpis">
-  <div class="card kpi"><div class="lbl">Assigned to me</div><b style="color:{{ $mine->count() ? 'var(--warn)' : 'inherit' }}">{{ $mine->count() }}</b><small>submittals to review</small></div>
-  <div class="card kpi"><div class="lbl">Studies (form)</div><b>{{ $studies->count() }}</b><small>assigned to me</small></div>
-  <div class="card kpi"><div class="lbl">Waiting in my categories</div><b>{{ $free->count() }}</b><small>not assigned yet</small></div>
-  <div class="card kpi"><div class="lbl">Issued this month</div><b>{{ $issuedMonth }}</b><small>{{ now()->format('F') }}</small></div>
+@php
+  $cards = [
+    ['red', 'clipboard', __('My studies'), $studies->count(), route('v2.admin.studies', ['who' => 'mine'])],
+    ['cyan', 'layers', __('Unassigned studies'), $openStudies->count(), route('v2.admin.studies', ['who' => 'none'])],
+    ['violet', 'check', __('Issued this month'), $issuedMonth, route('v2.admin.studies', ['who' => 'mine', 'status' => 'issued'])],
+  ];
+  if ($mine->count() || $free->count()) {
+    $cards[] = ['amber', 'inbox', __('Submittals assigned to me'), $mine->count(), route('v2.admin.submissions')];
+    $cards[] = ['slate', 'inbox', __('Waiting in my categories'), $free->count(), route('v2.admin.submissions')];
+  }
+@endphp
+<div class="stats">
+  @foreach ($cards as $i => [$c, $ic, $label, $n, $href])
+    <a class="stat-card {{ $c }} {{ $n ? '' : 'zero' }}" style="--d: {{ $i }}" href="{{ $href }}">
+      <div><div class="lbl">{{ $label }}</div><b>{{ $n }}</b><span class="more">{{ __('View details') }} <x-v2.icon name="ext"/></span></div>
+      <span class="ico"><x-v2.icon :name="$ic"/></span>
+    </a>
+  @endforeach
 </div>
 
-<div class="card" style="margin-top:16px">
-  <div class="pad" style="padding-bottom:6px"><h2>My submittals</h2></div>
-  @if ($mine->isEmpty())<div class="empty">Nothing assigned to you right now.</div>@else
+<div class="grid g2">
+  <div class="card">
+    <div class="card-h"><h2>{{ __('My studies') }}</h2></div>
+    @if ($studies->isEmpty())<div class="empty">{{ __('Nothing assigned to you right now.') }}</div>@else
+    <div class="tbl"><table class="t">
+      @foreach ($studies as $s)<tr class="click" onclick="location.href='{{ route('v2.admin.studies.show', $s) }}'"><td class="mono"><a href="{{ route('v2.admin.studies.show', $s) }}">{{ $s->code }}</a></td><td><b>{{ \Illuminate\Support\Str::limit($s->project_name, 36) }}</b><div class="mute" style="font-size:12.5px">{{ $s->typeName() }} · {{ $s->revLabel() }}</div></td><td class="num">{{ __(':n findings', ['n' => (int) $s->finding_count]) }}</td></tr>@endforeach
+    </table></div>@endif
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>{{ __('Unassigned studies') }}</h2></div>
+    @if ($openStudies->isEmpty())<div class="empty">{{ __('No unassigned requests.') }}</div>@else
+    <div class="tbl"><table class="t">
+      @foreach ($openStudies as $s)<tr class="click" onclick="location.href='{{ route('v2.admin.studies.show', $s) }}'"><td class="mono"><a href="{{ route('v2.admin.studies.show', $s) }}">{{ $s->code }}</a></td><td><b>{{ \Illuminate\Support\Str::limit($s->project_name, 36) }}</b><div class="mute" style="font-size:12.5px">{{ $s->typeName() }}</div></td><td class="mute">{{ $s->created_at->diffForHumans(null, true) }}</td></tr>@endforeach
+    </table></div>@endif
+  </div>
+</div>
+
+@if ($mine->isNotEmpty() || $free->isNotEmpty())
+<div class="card" style="margin-top:18px">
+  <div class="card-h"><h2>{{ __('My submittals') }}</h2></div>
+  @if ($mine->isEmpty())<div class="empty">{{ __('Nothing assigned to you right now.') }}</div>@else
   <div class="tbl"><table class="t">
-    <tr><th>Received</th><th>Code</th><th>Project / title</th><th>Category</th><th>Status</th><th></th></tr>
+    <tr><th>{{ __('Received') }}</th><th>{{ __('Code') }}</th><th>{{ __('Project / title') }}</th><th>{{ __('Status') }}</th><th></th></tr>
     @foreach ($mine as $s)
       <tr class="click" onclick="location.href='{{ route('v2.admin.submissions.show', $s) }}'">
-        <td>{{ $s->created_at->format('d M') }} <span class="mute">· {{ $s->created_at->diffForHumans(null, true) }}</span></td>
+        <td>{{ $s->created_at->translatedFormat('d M') }} <span class="mute">· {{ $s->created_at->diffForHumans(null, true) }}</span></td>
         <td class="mono">{{ $s->code }}</td>
         <td><b>{{ \Illuminate\Support\Str::limit($s->project_name, 40) }}</b><div class="mute" style="font-size:12.5px">{{ \Illuminate\Support\Str::limit($s->title ?: $s->file_name, 50) }}</div></td>
-        <td>{{ $s->category?->name_en ?? '–' }}</td>
         <td>@include('v2.admin.partials.status')</td>
-        <td>@if (! $s->review())<a class="btn primary" style="padding:6px 10px" href="{{ route('v2.admin.submissions.workspace', [$s, 'start' => 1]) }}" onclick="event.stopPropagation()">Start the check</a>@else<a class="btn" style="padding:6px 10px" href="{{ route('v2.admin.submissions.workspace', $s) }}" onclick="event.stopPropagation()">Open</a>@endif</td>
+        <td>@if (! $s->review())<a class="btn primary sm" href="{{ route('v2.admin.submissions.workspace', [$s, 'start' => 1]) }}" onclick="event.stopPropagation()">{{ __('Start the check') }}</a>@else<a class="btn sm" href="{{ route('v2.admin.submissions.workspace', $s) }}" onclick="event.stopPropagation()">{{ __('Open the check') }}</a>@endif</td>
       </tr>
     @endforeach
-  </table></div>
-  @endif
-</div>
-
-<div class="grid g21" style="margin-top:16px">
-  <div class="card">
-    <div class="pad" style="padding-bottom:6px"><h2>Waiting in my categories</h2></div>
-    @if ($free->isEmpty())<div class="empty">No unassigned requests.</div>@else
+  </table></div>@endif
+  @if ($free->isNotEmpty())
+    <div class="card-h" style="border-top:1px solid var(--line)"><h2>{{ __('Waiting in my categories') }}</h2></div>
     <div class="tbl"><table class="t">
       @foreach ($free as $s)
         <tr><td class="mono">{{ $s->code }}</td><td>{{ \Illuminate\Support\Str::limit($s->project_name, 36) }}<div class="mute" style="font-size:12.5px">{{ $s->category?->name_en }}</div></td>
-          <td style="text-align:end"><form method="post" action="{{ route('v2.admin.submissions.assign', $s) }}">@csrf<input type="hidden" name="user" value="{{ auth()->id() }}"><button class="btn" style="padding:6px 10px">Take</button></form></td></tr>
+          <td style="text-align:end"><form method="post" action="{{ route('v2.admin.submissions.assign', $s) }}">@csrf<input type="hidden" name="user" value="{{ auth()->id() }}"><button class="btn sm">{{ __('Take') }}</button></form></td></tr>
       @endforeach
     </table></div>
-    @endif
-  </div>
-  <div class="card pad">
-    <h2>My categories</h2>
-    @forelse ($categories as $c)
-      <div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>{{ $c->name_en }}</b>
-        <div class="mute" style="font-size:12.5px">{{ count(array_filter($c->rules ?? [], fn ($r) => $r['active'] ?? true)) }} criteria @if ($c->specPath())· <a href="{{ route('v2.admin.categories.spec', $c) }}" target="_blank">specification ↗</a>@else· no specification file @endif</div></div>
-    @empty
-      <p class="mute">You are not responsible for a category yet — an admin sets this under Categories.</p>
-    @endforelse
-  </div>
+  @endif
 </div>
+@endif
 
-@if ($studies->isNotEmpty())
-<div class="card" style="margin-top:16px">
-  <div class="pad" style="padding-bottom:6px"><h2>My studies (form)</h2></div>
-  <div class="tbl"><table class="t">
-    @foreach ($studies as $s)<tr class="click" onclick="location.href='{{ route('v2.admin.studies.show', $s) }}'"><td class="mono">{{ $s->code }}</td><td>{{ $s->project_name }}<div class="mute" style="font-size:12.5px">{{ $s->typeName('en') }} · {{ $s->revLabel() }}</div></td><td class="num">{{ $s->finding_count }} findings</td></tr>@endforeach
-  </table></div>
+@if ($categories->isNotEmpty())
+<div class="card pad" style="margin-top:18px">
+  <h2>{{ __('My categories') }}</h2>
+  @foreach ($categories as $c)
+    <div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>{{ $c->name_en }}</b>
+      <div class="mute" style="font-size:12.5px">{{ __(':n criteria', ['n' => count(array_filter($c->rules ?? [], fn ($r) => $r['active'] ?? true))]) }} @if ($c->specPath())· <a href="{{ route('v2.admin.categories.spec', $c) }}" target="_blank">{{ __('specification') }} ↗</a>@else· {{ __('no specification file') }} @endif</div></div>
+  @endforeach
 </div>
 @endif
 @endsection

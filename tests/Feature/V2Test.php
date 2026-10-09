@@ -56,6 +56,31 @@ class V2Test extends TestCase
         $this->get('/v2/projects/does-not-exist')->assertNotFound();
     }
 
+    public function test_site_leads_to_the_study_forms_only(): void
+    {
+        config(['v2.file_submit' => false]);
+        $this->get('/v2/submit')->assertRedirect('/v2/studies');
+        $this->postJson('/v2/submit', [])->assertNotFound();
+        $this->get('/v2')->assertOk()->assertSee(route('v2.studies'))->assertDontSee('href="' . route('v2.submit') . '"', false)
+            ->assertSee('class="slider"', false)->assertSee('lib/v2/banner/');
+    }
+
+    public function test_dashboard_in_both_languages(): void
+    {
+        $this->get('/v2/admin/login')->assertOk()->assertSee('Welcome back');
+        $this->get('/v2/admin/login?lang=ar')->assertOk()->assertSee('dir="rtl"', false)->assertSee('مرحباً بعودتك');
+        $this->actingAs(\App\Models\User::where('role', 'admin')->first() ?? \App\Models\User::first());
+        $this->get('/v2/admin')->assertOk()->assertSee('dir="rtl"', false)->assertSee('عرض التفاصيل');
+        $this->get('/v2/admin?lang=en')->assertOk()->assertSee('dir="ltr"', false)->assertSee('View details');
+
+        // a banner photo uploaded from the company profile replaces the built-in artwork
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $co = \App\V2\Site::company();
+        $this->put('/v2/admin/company', ['co' => ['name_en' => $co['name_en'], 'name_ar' => $co['name_ar']],
+            'slides' => [['image' => \Illuminate\Http\UploadedFile::fake()->create('site.jpg', 200, 'image/jpeg'), 'title_en' => 'Our new tower']]])->assertSessionHas('ok');
+        $this->get('/v2?lang=en')->assertSee('Our new tower')->assertSee('/v2/media/v2/slides/')->assertDontSee('lib/v2/banner/');
+    }
+
     public function test_v1_is_untouched(): void
     {
         $this->get('/')->assertOk()->assertSee('Submittal Review');

@@ -61,7 +61,7 @@ class CategoryController extends Controller
         ]);
         $c->engineers()->sync($d['engineers'] ?? []);
 
-        return redirect()->route('v2.admin.categories.edit', $c)->with('ok', 'Category created. Upload its specification and set its criteria below.');
+        return redirect()->route('v2.admin.categories.edit', $c)->with('ok', __('Category created. Upload its specification and set its criteria below.'));
     }
 
     public function update(Request $r, Category $category)
@@ -74,7 +74,7 @@ class CategoryController extends Controller
         ]);
         $category->engineers()->sync($d['engineers'] ?? []);
 
-        return back()->with('ok', 'Category saved.');
+        return back()->with('ok', __('Category saved.'));
     }
 
     private function types(array $d): array
@@ -98,7 +98,7 @@ class CategoryController extends Controller
         $name = $category->name_en;
         $category->delete(); // its submissions keep their files; they just lose the category
 
-        return redirect()->route('v2.admin.categories')->with('ok', "Category \"$name\" deleted.");
+        return redirect()->route('v2.admin.categories')->with('ok', __('Category ":name" deleted.', ['name' => $name]));
     }
 
     // ---- the specification PDF
@@ -109,18 +109,18 @@ class CategoryController extends Controller
         $file = $r->file('spec');
         $bytes = (string) file_get_contents($file->getRealPath());
         if (! str_starts_with($bytes, '%PDF')) {
-            return back()->with('bad', 'The specification must be a PDF file.');
+            return back()->with('bad', __('The specification must be a PDF file.'));
         }
         try {
             $pages = count((new Reader($bytes))->pages());
         } catch (\Throwable $e) {
-            return back()->with('bad', 'This PDF cannot be read: ' . $e->getMessage());
+            return back()->with('bad', __('This PDF cannot be read: :error', ['error' => $e->getMessage()]));
         }
         File::ensureDirectoryExists($category->dir());
         $file->move($category->dir(), 'spec.pdf');
         $category->update(['spec_file' => basename($file->getClientOriginalName()), 'spec_size' => strlen($bytes), 'spec_title' => $category->spec_title ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)]);
 
-        return back()->with('ok', "Specification uploaded ($pages pages).");
+        return back()->with('ok', __('Specification uploaded (:n pages).', ['n' => $pages]));
     }
 
     /** Opened in the browser's PDF viewer; "#page=N" in the link jumps to a clause's page. */
@@ -138,7 +138,7 @@ class CategoryController extends Controller
         @unlink($category->dir() . '/spec.pdf');
         $category->update(['spec_file' => null, 'spec_size' => 0]);
 
-        return back()->with('ok', 'Specification removed.');
+        return back()->with('ok', __('Specification removed.'));
     }
 
     // ---- the criteria (rules of the check engine)
@@ -182,6 +182,6 @@ class CategoryController extends Controller
         }
         $category->update(['rules' => $rules]);
 
-        return back()->with('ok', count($rules) . ' criteria saved. New checks use them; press "Re-run with the current criteria" on a submittal to apply them there.');
+        return back()->with('ok', __(':n criteria saved. New checks use them; press "Re-run with the current criteria" on a submittal to apply them there.', ['n' => count($rules)]));
     }
 }

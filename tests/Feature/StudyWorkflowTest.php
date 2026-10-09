@@ -102,7 +102,7 @@ class StudyWorkflowTest extends TestCase
         $this->actingAs($omar);
         $this->patch("/v2/admin/studies/{$s->id}", ['action' => 'issue', 'decision' => 'revise', 'findings' => [['include' => 1]]])->assertSessionHas('ok');
         $this->get("/v2/admin/studies/{$s->id}")->assertSee('study issued')->assertSee('Revise and resubmit')->assertSee('study assigned')->assertSee('study submitted');
-        $this->get('/v2/admin')->assertOk()->assertSee('My requests');
+        $this->get('/v2/admin')->assertOk()->assertSee('My studies');
         auth('web')->logout();
         $this->actingAs($this->admin());
         $this->get('/v2/admin')->assertOk()->assertSee($s->code); // the admin dashboard lists the activity

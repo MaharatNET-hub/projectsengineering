@@ -27,11 +27,15 @@ class SubmitController extends Controller
 
     public function form()
     {
+        if (! config('v2.file_submit')) {
+            return redirect()->route('v2.studies');
+        }
         return view('v2.site.submit', ['chunk' => self::CHUNK, 'maxMb' => config('v2.max_upload_mb'), 'categories' => Category::where('active', true)->orderBy('sort')->orderBy('id')->get()]);
     }
 
     public function create(Request $r): JsonResponse
     {
+        abort_unless(config('v2.file_submit'), 404);
         if ($r->filled('website')) {
             return response()->json(['error' => 'Rejected'], 422);
         }

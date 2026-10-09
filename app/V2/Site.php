@@ -51,6 +51,41 @@ final class Site
         return Setting::get('review', []) + ['hide_default' => true, 'notify_email' => '', 'auto_analyse' => false];
     }
 
+    /**
+     * The home-page banner: the slides uploaded from the dashboard, or the built-in artwork.
+     * Each slide: image url, eyebrow, title, text (already in the current language).
+     */
+    public static function slides(): array
+    {
+        $copy = __('site.slides');
+        $out = [];
+        foreach (Setting::get('slides', []) as $i => $s) {
+            if (empty($s['image']) || ! \Illuminate\Support\Facades\Storage::disk('public')->exists($s['image'])) {
+                continue;
+            }
+            $out[] = [
+                'image' => route('v2.media', ['path' => $s['image']]),
+                'eyebrow' => self::t($s, 'eyebrow') ?: ($copy[$i % count($copy)]['eyebrow'] ?? ''),
+                'title' => self::t($s, 'title') ?: ($i === 0 ? self::name() : ''),
+                'text' => self::t($s, 'text') ?: ($i === 0 ? self::t(self::company(), 'tagline') : ''),
+            ];
+        }
+        if ($out) {
+            return $out;
+        }
+        foreach (['skyline', 'blueprint', 'power'] as $i => $art) {
+            $c = $copy[$i] ?? [];
+            $out[] = [
+                'image' => asset("lib/v2/banner/$art.svg"),
+                'eyebrow' => $c['eyebrow'] ?? '',
+                'title' => $c['title'] ?? self::name(),
+                'text' => $c['text'] ?? self::t(self::company(), 'tagline'),
+            ];
+        }
+
+        return $out;
+    }
+
     /** Same page in the other language. */
     public static function switchUrl(): string
     {

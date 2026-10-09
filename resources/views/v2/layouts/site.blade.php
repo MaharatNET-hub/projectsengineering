@@ -11,9 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('lib/v2/site.css') }}?v={{ filemtime(public_path('lib/v2/site.css')) }}">
 @stack('head')
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2312306b'/%3E%3Ccircle cx='25' cy='25' r='6' fill='%23f2a516'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e1838'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%2338bdf8'/%3E%3C/svg%3E">
 </head>
-<body>
+<body class="{{ request()->routeIs('v2.home') ? 'is-home' : '' }}">
 <header class="top">
   <div class="wrap">
     <a class="logo" href="{{ route('v2.home') }}"><span class="mark">{{ Site::initial() }}</span><span>{{ Site::name() }}</span></a>
@@ -22,13 +22,12 @@
       @foreach ($nav as $k => $r)
         <a href="{{ route($r) }}" class="{{ request()->routeIs($r) || ($k === 'projects' && request()->routeIs('v2.project')) ? 'on' : '' }}">{{ __("v2.nav.$k") }}</a>
       @endforeach
-      <a href="{{ route('v2.studies') }}" class="{{ request()->routeIs('v2.studies*') ? 'on' : '' }}">{{ __('studies.nav') }}</a>
-      <a href="{{ route('v2.track') }}" class="{{ request()->routeIs('v2.track*') ? 'on' : '' }}">{{ __('v2.nav.track') }}</a>
+      <a href="{{ route('v2.studies') }}" class="{{ request()->routeIs('v2.studies*') ? 'on' : '' }}">{{ __('site.nav_studies') }}</a>
     </nav>
     <div class="tools">
       <a class="lang" href="{{ auth('client')->check() ? route('v2.account') : route('v2.account.login') }}">{{ auth('client')->check() ? __('studies.account.menu') : __('studies.account.login') }}</a>
       <a class="lang" href="{{ Site::switchUrl() }}" hreflang="{{ Site::ar() ? 'en' : 'ar' }}">{{ __('v2.lang_switch') }}</a>
-      <a class="btn primary" href="{{ route('v2.submit') }}"><x-v2.icon name="upload"/>{{ __('v2.nav.submit_short') }}</a>
+      <a class="btn primary" href="{{ route('v2.studies') }}"><x-v2.icon name="clipboard"/>{{ __('site.cta_short') }}</a>
     </div>
   </div>
 </header>
@@ -45,7 +44,6 @@
       <div>
         <h4>{{ __('v2.footer.quick') }}</h4>
         @foreach ($nav as $k => $r)<a href="{{ route($r) }}">{{ __("v2.nav.$k") }}</a>@endforeach
-        <a href="{{ route('v2.submit') }}">{{ __('v2.nav.submit') }}</a>
         <a href="{{ route('v2.studies') }}">{{ __('studies.nav') }}</a>
       </div>
       <div>
@@ -58,6 +56,18 @@
     <div class="bottom"><span>© {{ date('Y') }} {{ Site::name() }}. {{ __('v2.footer.rights') }}</span><a href="{{ route('v2.admin.dashboard') }}" style="display:inline;color:#64748b">{{ __('v2.nav.admin') }}</a></div>
   </div>
 </footer>
+<script>
+// header shadow once the page scrolls, and sections that fade in as they enter the view
+(function () {
+  var top = document.querySelector('.top');
+  var onScroll = function () { top.classList.toggle('scrolled', window.scrollY > 8); };
+  onScroll(); window.addEventListener('scroll', onScroll, { passive: true });
+  var els = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); return; }
+  var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -8% 0px' });
+  els.forEach(function (e) { io.observe(e); });
+})();
+</script>
 @stack('scripts')
 </body>
 </html>
