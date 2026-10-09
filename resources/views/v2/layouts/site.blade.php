@@ -26,6 +26,7 @@
       <a href="{{ route('v2.track') }}" class="{{ request()->routeIs('v2.track*') ? 'on' : '' }}">{{ __('v2.nav.track') }}</a>
     </nav>
     <div class="tools">
+      <a class="lang" href="{{ auth('client')->check() ? route('v2.account') : route('v2.account.login') }}">{{ auth('client')->check() ? __('studies.account.menu') : __('studies.account.login') }}</a>
       <a class="lang" href="{{ Site::switchUrl() }}" hreflang="{{ Site::ar() ? 'en' : 'ar' }}">{{ __('v2.lang_switch') }}</a>
       <a class="btn primary" href="{{ route('v2.submit') }}"><x-v2.icon name="upload"/>{{ __('v2.nav.submit_short') }}</a>
     </div>

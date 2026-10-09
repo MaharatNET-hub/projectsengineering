@@ -2,15 +2,21 @@
   use App\V2\Site;
   $unread = \App\Models\V2\Message::whereNull('read_at')->count();
   $waiting = \App\Models\V2\Submission::whereIn('status', ['received', 'analysing', 'review'])->count();
-  $studies = \App\Models\V2\Study::whereIn('status', ['submitted', 'review'])->count();
+  $me = auth()->user();
+  $studies = \App\Models\V2\Study::whereIn('status', ['submitted', 'review'])->when(! $me->isAdmin(), fn ($q) => $q->where(fn ($w) => $w->whereNull('assigned_to')->orWhere('assigned_to', $me->id)))->count();
   $items = [
     ['v2.admin.dashboard', 'dash', 'Dashboard', null, 'v2.admin.dashboard'],
     ['v2.admin.submissions', 'clipboard', 'Submissions', $waiting, 'v2.admin.submissions*'],
-    ['v2.admin.studies', 'chart', 'Studies (form)', $studies, 'v2.admin.studies*'],
-    ['v2.admin.messages', 'inbox', 'Messages', $unread, 'v2.admin.messages*'],
+    ['v2.admin.studies', 'clipboard', 'Studies (form)', $studies, 'v2.admin.studies', 'v2.admin.studies.show'],
+    ['v2.admin.studies.stats', 'chart', 'Statistics', null, 'v2.admin.studies.stats'],
   ];
-  $site = [
+  if ($me->isAdmin()) {
+    $items[] = ['v2.admin.messages', 'inbox', 'Messages', $unread, 'v2.admin.messages*'];
+    $items[] = ['v2.admin.clients', 'user', 'Clients', null, 'v2.admin.clients'];
+  }
+  $site = ! $me->isAdmin() ? [] : [
     ['v2.admin.study-types', 'edit', 'Study types', 'v2.admin.study-types*'],
+    ['v2.admin.users', 'helmet', 'Users', 'v2.admin.users'],
     ['v2.admin.company', 'building', 'Company profile', 'v2.admin.company'],
     ['v2.admin.services.index', 'star', 'Services', 'v2.admin.services.*'],
     ['v2.admin.projects.index', 'file', 'Projects', 'v2.admin.projects.*'],
@@ -28,19 +34,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('lib/v2/admin.css') }}?v={{ filemtime(public_path('lib/v2/admin.css')) }}">
+<link rel="stylesheet" href="{{ asset('lib/v2/studies.css') }}?v={{ filemtime(public_path('lib/v2/studies.css')) }}">
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sb">
     <a class="brand" href="{{ route('v2.admin.dashboard') }}"><span class="mark">{{ Site::initial() }}</span><span>{{ \Illuminate\Support\Str::limit(Site::t(Site::company(), 'name') ?: 'Admin', 22) }}<small>Admin</small></span></a>
-    @foreach ($items as [$r, $ic, $label, $badge, $pat])
-      <a class="nav {{ request()->routeIs($pat) ? 'on' : '' }}" href="{{ route($r) }}"><x-v2.icon :name="$ic"/>{{ $label }}@if ($badge)<span class="badge">{{ $badge }}</span>@endif</a>
+    @foreach ($items as $it)
+      @php [$r, $ic, $label, $badge] = $it; $pats = array_slice($it, 4); @endphp
+      <a class="nav {{ request()->routeIs(...$pats) ? 'on' : '' }}" href="{{ route($r) }}"><x-v2.icon :name="$ic"/>{{ $label }}@if ($badge)<span class="badge">{{ $badge }}</span>@endif</a>
     @endforeach
-    <div class="grp">Website</div>
+    @if ($site)<div class="grp">Administration</div>@endif
     @foreach ($site as [$r, $ic, $label, $pat])
       <a class="nav {{ request()->routeIs($pat) ? 'on' : '' }}" href="{{ route($r) }}"><x-v2.icon :name="$ic"/>{{ $label }}</a>
     @endforeach
     <div class="bottom">
+      <a class="nav {{ request()->routeIs('v2.admin.me') ? 'on' : '' }}" href="{{ route('v2.admin.me') }}"><x-v2.icon name="user"/>My account</a>
       <a class="nav" href="{{ route('v2.home') }}" target="_blank"><x-v2.icon name="globe"/>View website</a>
       <a class="nav" href="{{ url('/') }}" target="_blank"><x-v2.icon name="eye"/>v1 demo</a>
       <form method="post" action="{{ route('v2.admin.logout') }}">@csrf<button><x-v2.icon name="out"/>Log out <span class="mute" style="font-size:12px;margin-inline-start:auto">{{ \Illuminate\Support\Str::limit(auth()->user()->email, 18) }}</span></button></form>

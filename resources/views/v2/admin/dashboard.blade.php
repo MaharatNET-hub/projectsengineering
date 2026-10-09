@@ -40,7 +40,7 @@
   <div class="card pad">
     <h2>Activity</h2>
     <ul class="feed">
-      @forelse ($activity as $a)<li><span>{{ str_replace(['.', '_'], ' ', $a->action) }}@if ($a->submission) · <a href="{{ route('v2.admin.submissions.show', $a->submission) }}" class="mono">{{ $a->submission->code }}</a>@endif @if ($a->detail)<span class="mute"> — {{ \Illuminate\Support\Str::limit($a->detail, 60) }}</span>@endif</span><span class="when">{{ $a->created_at->diffForHumans(null, true) }}</span></li>
+      @forelse ($activity as $a)<li><span>{{ str_replace(['.', '_'], ' ', $a->action) }}@if ($a->submission) · <a href="{{ route('v2.admin.submissions.show', $a->submission) }}" class="mono">{{ $a->submission->code }}</a>@elseif ($a->study) · <a href="{{ route('v2.admin.studies.show', $a->study) }}" class="mono">{{ $a->study->code }}</a>@endif @if ($a->detail)<span class="mute"> — {{ \Illuminate\Support\Str::limit($a->detail, 60) }}</span>@endif</span><span class="when">{{ $a->created_at->diffForHumans(null, true) }}</span></li>
       @empty<li class="mute">No activity yet.</li>@endforelse
     </ul>
   </div>

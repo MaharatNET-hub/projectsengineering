@@ -28,6 +28,59 @@ class Study extends Model
         static::deleting(fn (self $s) => File::deleteDirectory($s->dir()));
     }
 
+    public function parent()
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    /** The revision that answers this one (Rev n+1), if any. */
+    public function child()
+    {
+        return $this->hasOne(self::class, 'parent_id');
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function assignee()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'assigned_to');
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(Activity::class)->latest('id');
+    }
+
+    /** "Rev 0", "Rev 1"… */
+    public function revLabel(): string
+    {
+        return 'Rev ' . (int) $this->revision;
+    }
+
+    /** All revisions of this study, oldest first. */
+    public function history(): array
+    {
+        $first = $this;
+        for ($i = 0; $i < 50 && $first->parent; $i++) {
+            $first = $first->parent;
+        }
+        $out = [$first];
+        for ($i = 0; $i < 50 && ($next = end($out)->child); $i++) {
+            $out[] = $next;
+        }
+
+        return $out;
+    }
+
+    /** The client may send a new revision once the review is issued and asks for changes. */
+    public function canResubmit(): bool
+    {
+        return $this->isIssued() && in_array($this->decision, ['revise', 'rejected', 'noted'], true) && ! $this->child()->exists();
+    }
+
     public function def(): ?array
     {
         return StudyTypes::find($this->type);

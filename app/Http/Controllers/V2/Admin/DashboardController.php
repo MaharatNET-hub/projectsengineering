@@ -35,7 +35,7 @@ class DashboardController extends Controller
             'decisions' => $decisions,
             'queue' => Submission::whereIn('status', ['received', 'analysing', 'review'])->oldest()->take(6)->get(),
             'recent' => Submission::latest()->take(8)->get(),
-            'activity' => Activity::with('submission', 'user')->latest()->take(10)->get(),
+            'activity' => Activity::with('submission', 'study', 'user')->latest()->take(10)->get(),
             'messages' => Message::latest()->take(4)->get(),
         ]);
     }

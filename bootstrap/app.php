@@ -16,8 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // free/shared hosts terminate HTTPS at a proxy: trust it so links keep https://
         $middleware->trustProxies(at: '*');
         // v2 admin: guests go to its login page
-        $middleware->redirectGuestsTo(fn () => route('v2.admin.login'));
-        $middleware->redirectUsersTo(fn () => route('v2.admin.dashboard'));
+        // client accounts have their own login; everything else is the office's admin
+        $middleware->redirectGuestsTo(fn ($r) => $r->routeIs('v2.account*') ? route('v2.account.login') : route('v2.admin.login'));
+        $middleware->redirectUsersTo(fn ($r) => $r->routeIs('v2.account*') ? route('v2.account') : route('v2.admin.dashboard'));
+        $middleware->alias(['v2.admin' => \App\Http\Middleware\V2\AdminOnly::class]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

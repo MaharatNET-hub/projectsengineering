@@ -20,7 +20,7 @@ class AuthController extends Controller
     public function login(Request $r)
     {
         $cred = $r->validate(['email' => 'required|email', 'password' => 'required|string']);
-        if (! Auth::attempt($cred, $r->boolean('remember'))) {
+        if (! Auth::attempt($cred + ['active' => true], $r->boolean('remember'))) {
             return back()->withErrors(['email' => 'Wrong email or password.'])->onlyInput('email');
         }
         $r->session()->regenerate();

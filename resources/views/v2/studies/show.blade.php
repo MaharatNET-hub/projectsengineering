@@ -18,6 +18,13 @@
 <section class="block">
   <div class="wrap sr-page">
     @if ($isNew)<div class="alert ok"><b>{{ __('studies.result.received') }}.</b> {{ __('studies.result.keep') }}</div>@endif
+    @if ($s->child)<div class="banner soft">{{ __('studies.rev.replaced', ['code' => $s->child->code]) }} — <a href="{{ route('v2.studies.show', $s->child->code) }}">{{ $s->child->revLabel() }} →</a></div>@endif
+    @if ($s->canResubmit())
+      <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-color:#fde3a7;background:#fffbf0">
+        <div style="flex:1;min-width:240px"><b>{{ __('studies.rev.resubmit', ['rev' => 'Rev ' . ($s->revision + 1)]) }}</b><p class="mute" style="margin:4px 0 0">{{ __('studies.rev.resubmit_note') }}</p></div>
+        <a class="btn primary no-print" href="{{ route('v2.studies.form', [$s->type, 'from' => $s->code]) }}"><x-v2.icon name="edit"/>{{ __('studies.rev.resubmit', ['rev' => 'Rev ' . ($s->revision + 1)]) }}</a>
+      </div>
+    @endif
 
     <div class="card">
       <div class="steps">
@@ -26,13 +33,21 @@
         @endforeach
       </div>
       <dl class="kv">
-        <dt>{{ __('studies.result.status') }}</dt><dd>{{ __("studies.status.{$s->status}") }}</dd>
+        <dt>{{ __('studies.result.status') }}</dt><dd>{{ __("studies.status.{$s->status}") }} · <span dir="ltr">{{ $s->revLabel() }}</span></dd>
+        @if (count($history) > 1)<dt>{{ __('studies.rev.history') }}</dt><dd>@foreach ($history as $h)@if (! $loop->first) · @endif @if ($h->is($s))<span dir="ltr">{{ $h->revLabel() }}</span>@else<a href="{{ route('v2.studies.show', $h->code) }}" dir="ltr">{{ $h->revLabel() }}</a>@endif @endforeach</dd>@endif
         <dt>{{ __('studies.form.project') }}</dt><dd>{{ $s->project_name }}</dd>
         @if ($s->reference)<dt>{{ __('studies.form.reference') }}</dt><dd>{{ $s->reference }}</dd>@endif
         <dt>{{ __('studies.result.submitted') }}</dt><dd dir="ltr" style="text-align:start">{{ $s->created_at->format('d M Y, H:i') }}</dd>
         <dt>{{ __('studies.result.file') }}</dt><dd>{{ $s->file_name ?: '–' }}@if ($s->page_count) · {{ $s->page_count }} {{ __('v2.track.pages') }}@endif</dd>
       </dl>
     </div>
+
+    @if ($diff)
+      <div class="card">
+        <h2 style="margin-top:0">{{ __('studies.rev.title', ['rev' => $diff['from']]) }}</h2>
+        @include('v2.studies._diff', ['diff' => $diff])
+      </div>
+    @endif
 
     @if ($showFindings && $a)
       <div class="card">

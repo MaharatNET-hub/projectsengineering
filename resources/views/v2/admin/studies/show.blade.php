@@ -6,7 +6,7 @@
   $chip = ['fail' => 'fail', 'warn' => 'warn', 'missing' => 'mute', 'mismatch' => 'accent'];
 @endphp
 @extends('v2.layouts.admin', ['title' => $s->project_name])
-@section('crumb')<div class="mute" style="font-size:12.5px"><a href="{{ route('v2.admin.studies') }}">Studies</a> › <span class="mono">{{ $s->code }}</span></div>@endsection
+@section('crumb')<div class="mute" style="font-size:12.5px"><a href="{{ route('v2.admin.studies') }}">Studies</a> › <span class="mono">{{ $s->code }}</span> · {{ $s->revLabel() }}</div>@endsection
 @section('actions')
   <a class="btn" href="{{ route('v2.admin.studies.report', $s) }}"><x-v2.icon name="down"/>{{ $s->isIssued() ? 'Report PDF' : 'Draft report PDF' }}</a>
   <a class="btn" href="{{ route('v2.studies.show', $s->code) }}" target="_blank"><x-v2.icon name="eye"/>Client page</a>
@@ -14,8 +14,17 @@
 @section('content')
 <div class="grid g21">
   <div class="grid" style="align-content:start;min-width:0">
+    @if ($s->child)<div class="alert ok" style="margin:0">A newer revision was submitted: <a href="{{ route('v2.admin.studies.show', $s->child) }}">{{ $s->child->code }} ({{ $s->child->revLabel() }})</a>.</div>@endif
+    @if ($diff)
+      <div class="card pad">
+        <h2 style="margin-top:0">Changes since {{ $diff['from'] }} <a class="mono" style="font-size:13px;font-weight:500" href="{{ route('v2.admin.studies.show', $s->parent) }}">{{ $s->parent->code }}</a></h2>
+        @include('v2.studies._diff', ['diff' => $diff])
+      </div>
+    @endif
+    @unless ($canEdit)<div class="alert bad" style="margin:0">Assigned to {{ $s->assignee?->name }} — only they or an admin can edit this review.</div>@endunless
     <form class="card pad form" method="post" action="{{ route('v2.admin.studies.update', $s) }}">
       @csrf @method('patch')
+      <fieldset @disabled(! $canEdit) style="border:0;padding:0;margin:0;display:grid;gap:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Findings</h2>
         <span class="mute" style="font-size:13px">{{ $a['stats']['pass'] ?? 0 }} of {{ $a['stats']['checks'] ?? 0 }} checks pass · suggested: <b>{{ __('studies.decision.' . ($a['suggested'] ?? 'noted'), [], 'en') }}</b></span></div>
       <p class="mute" style="margin:0;font-size:13px">Untick a finding to drop it from the report. Edit the wording in English and Arabic (the client sees their language; the PDF is in English).</p>
@@ -53,6 +62,7 @@
         <button class="btn" name="action" value="save"><x-v2.icon name="check"/>Save</button>
         <button class="btn primary" name="action" value="issue"><x-v2.icon name="send"/>{{ $s->isIssued() ? 'Save (issued)' : 'Save & issue to the client' }}</button>
       </div>
+      </fieldset>
     </form>
 
     <div class="card pad">
@@ -92,6 +102,26 @@
       <form method="post" action="{{ route('v2.admin.studies.reanalyse', $s) }}" style="margin-top:14px">@csrf<button class="btn"><x-v2.icon name="chart"/>Run the rules again</button></form>
     </div>
     <div class="card pad">
+      <h2>Engineer</h2>
+      <p style="margin:0 0 10px">{!! $s->assignee ? '<b>' . e($s->assignee->name) . '</b>' : '<span class="mute">Not assigned</span>' !!}</p>
+      @if (auth()->user()->isAdmin())
+        <form method="post" action="{{ route('v2.admin.studies.assign', $s) }}" style="display:flex;gap:8px">@csrf
+          <select class="inp" name="user"><option value="">— nobody —</option>@foreach ($engineers as $e)<option value="{{ $e->id }}" @selected($s->assigned_to === $e->id)>{{ $e->name }} ({{ $e->role }})</option>@endforeach</select>
+          <button class="btn">Assign</button>
+        </form>
+      @elseif (! $s->assigned_to)
+        <form method="post" action="{{ route('v2.admin.studies.assign', $s) }}">@csrf<input type="hidden" name="user" value="{{ auth()->id() }}"><button class="btn primary">Take this study</button></form>
+      @elseif ($s->assigned_to === auth()->id())
+        <form method="post" action="{{ route('v2.admin.studies.assign', $s) }}">@csrf<button class="btn">Hand it back</button></form>
+      @endif
+    </div>
+    @if (count($history) > 1)
+      <div class="card pad">
+        <h2>Revisions</h2>
+        <ol style="margin:0;padding-inline-start:20px">@foreach ($history as $h)<li style="margin-bottom:4px">@if ($h->is($s))<b>{{ $h->revLabel() }}</b> (this one)@else<a href="{{ route('v2.admin.studies.show', $h) }}">{{ $h->revLabel() }}</a>@endif <span class="mono mute" style="font-size:12px">{{ $h->code }}</span> · {{ $h->decision ? __('studies.decision.' . $h->decision, [], 'en') : ucfirst($h->status) }}</li>@endforeach</ol>
+      </div>
+    @endif
+    <div class="card pad">
       <h2>Client</h2>
       <dl class="kv">
         <dt>Name</dt><dd>{{ $s->client_name }}</dd>
@@ -99,7 +129,15 @@
         <dt>Email</dt><dd><a href="mailto:{{ $s->client_email }}">{{ $s->client_email }}</a></dd>
         <dt>Phone</dt><dd>{{ $s->client_phone ?: '–' }}</dd>
         <dt>Language</dt><dd>{{ $s->locale === 'ar' ? 'Arabic' : 'English' }}</dd>
+        <dt>Account</dt><dd>{{ $s->client ? 'Yes · ' . $s->client->email : 'No (tracking code only)' }}</dd>
       </dl>
+    </div>
+    <div class="card pad">
+      <h2>Activity</h2>
+      <ul class="feed" style="margin:0">
+        @forelse ($activity as $a)<li><span>{{ str_replace(['.', '_'], ' ', $a->action) }}@if ($a->detail)<span class="mute"> — {{ $a->detail }}</span>@endif <span class="mute" style="font-size:12px">· {{ $a->user?->name ?? 'client' }}</span></span><span class="when">{{ $a->created_at->diffForHumans(null, true) }}</span></li>
+        @empty<li class="mute">No activity yet.</li>@endforelse
+      </ul>
     </div>
     <div class="card pad">
       <h2>Send to the client</h2>
@@ -122,7 +160,7 @@
         <select class="inp" name="status">@foreach (\App\Models\V2\Study::STATUSES as $st)<option value="{{ $st }}" @selected($s->status === $st)>{{ ucfirst($st) }}</option>@endforeach</select>
         <button class="btn">Save</button>
       </form>
-      <form method="post" action="{{ route('v2.admin.studies.destroy', $s) }}" onsubmit="return confirm('Delete this study and its file?')" style="margin-top:12px">@csrf @method('delete')<button class="btn danger"><x-v2.icon name="trash"/>Delete</button></form>
+      @if (auth()->user()->isAdmin())<form method="post" action="{{ route('v2.admin.studies.destroy', $s) }}" onsubmit="return confirm('Delete this study and its file?')" style="margin-top:12px">@csrf @method('delete')<button class="btn danger"><x-v2.icon name="trash"/>Delete</button></form>@endif
     </div>
   </div>
 </div>

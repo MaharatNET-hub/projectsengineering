@@ -20,9 +20,11 @@ final class StudyTypes
     public static function all(): array
     {
         $out = [];
-        foreach (glob(resource_path('studies/*.json')) ?: [] as $f) {
+        // shipped types, then the ones created from the admin (stored with the edited copies)
+        $files = array_merge(glob(resource_path('studies/*.json')) ?: [], glob(dirname(self::overridePath('x')) . '/*.json') ?: []);
+        foreach ($files as $f) {
             $key = basename($f, '.json');
-            if ($def = self::find($key)) {
+            if (! isset($out[$key]) && ($def = self::find($key))) {
                 $out[$key] = $def;
             }
         }
@@ -57,6 +59,32 @@ final class StudyTypes
     public static function isEdited(string $key): bool
     {
         return is_file(self::overridePath($key));
+    }
+
+    /** Created from the admin (no shipped definition behind it). */
+    public static function isCustom(string $key): bool
+    {
+        return ! is_file(self::defaultPath($key));
+    }
+
+    /** Starting point for a new type: one data section and one table, no rules yet. */
+    public static function blank(string $key, array $name, string $discipline): array
+    {
+        return [
+            'key' => $key, 'version' => 1, 'discipline' => $discipline, 'icon' => 'clipboard', 'name' => $name,
+            'summary' => ['en' => '', 'ar' => ''], 'spec' => ['en' => '', 'ar' => ''],
+            'file' => ['required' => true, 'label' => ['en' => 'Supporting file', 'ar' => 'الملف الداعم'], 'hint' => ['en' => '', 'ar' => '']],
+            'sections' => [
+                ['key' => 'project', 'title' => ['en' => 'Design data', 'ar' => 'بيانات التصميم'], 'fields' => [
+                    ['key' => 'reference_value', 'type' => 'number', 'required' => true, 'unit' => '', 'label' => ['en' => 'Reference value', 'ar' => 'القيمة المرجعية']],
+                ]],
+                ['key' => 'items', 'title' => ['en' => 'Items', 'ar' => 'البنود'], 'repeat' => ['min' => 1, 'max' => 50, 'title' => 'tag', 'add' => ['en' => 'Add item', 'ar' => 'إضافة بند']], 'fields' => [
+                    ['key' => 'tag', 'type' => 'text', 'required' => true, 'max' => 40, 'label' => ['en' => 'Tag', 'ar' => 'الرمز']],
+                    ['key' => 'value', 'type' => 'number', 'required' => true, 'label' => ['en' => 'Value', 'ar' => 'القيمة']],
+                ]],
+            ],
+            'rules' => [],
+        ];
     }
 
     public static function save(string $key, array $def): void

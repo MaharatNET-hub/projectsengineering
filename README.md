@@ -95,6 +95,18 @@ copy is saved in `storage/app/studies/types/` and can be reset.
 | `resources/views/v2/studies/`, `resources/views/v2/admin/studies/`, `lang/{ar,en}/studies.php`, `public/lib/v2/studies.css` | Views, translations, styles |
 | `tests/Feature/StudiesTest.php` | Rules, calculations, validation, full public + admin flow |
 
+### Workflow features
+
+| Feature | Where |
+|---|---|
+| **Revisions (Rev 1, Rev 2…)** | When the engineer issues *revise / rejected / approved as noted*, the client's page offers "Submit a revised study": the form opens with the previous values, the commented fields highlighted, and the option to keep the previous supporting file. The new revision shows what changed (values; findings resolved / still open / new) on both sides. |
+| **Excel import** | Each table has "Download the Excel template" (CSV with `Label [key]` headers) and "Import from Excel" (CSV or XLSX, Arabic or English headers and values). |
+| **Draft + live checks** | The form is saved on the device as you type and restored on return; specification limits show next to a field as soon as a value breaks them (calculated values are checked on the server). |
+| **Client accounts** | `/v2/account`: register / log in, all studies with their status and revisions to send, add a study by tracking code; the form is filled with the account's details. |
+| **Engineers and roles** | Admin → Users: *admin* (everything) or *engineer* (studies and submittals only). Studies are assigned or taken; only the assignee or an admin edits a review. Every study has an activity timeline. |
+| **Statistics** | Admin → Statistics: volume per week, open / unassigned, time to issue, first-time approval rate, most frequent problems, decisions, per type and per engineer. |
+| **Visual type editor** | Admin → Study types: sections, fields (type, units, limits, choices) and rules edited with forms (JSON stays as an advanced tab); new study types from scratch or as a copy. |
+
 Settings (`.env`): `STUDIES_MAX_UPLOAD_MB` (50), `STUDIES_SHOW_PRELIMINARY` (true — show the automated check to
 the client immediately; false = status only until the engineer issues), `STUDIES_STEP_SECONDS` (10).
 

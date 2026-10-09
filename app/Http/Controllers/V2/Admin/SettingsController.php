@@ -47,6 +47,12 @@ class SettingsController extends Controller
         return back()->with('ok', 'Settings saved.');
     }
 
+    /** Every office user (admins and engineers) can change their own password here. */
+    public function me()
+    {
+        return view('v2.admin.me');
+    }
+
     public function password(Request $r)
     {
         $r->validate(['current' => 'required|current_password', 'password' => 'required|string|min:10|confirmed']);

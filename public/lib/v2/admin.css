@@ -122,3 +122,22 @@ dl.kv dt { color: var(--mute); } dl.kv dd { margin: 0; min-width: 0; overflow-wr
 .pager a, .pager span { padding: 5px 10px; border-radius: 7px; border: 1px solid var(--line); font-size: 13px; color: var(--ink2); }
 .pager .on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .thumb { width: 64px; height: 40px; border-radius: 6px; background: var(--c, #1f4fbf); object-fit: cover; display: block; }
+
+/* study type editor */
+.te-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; }
+.te-card h2 { margin-top: 0; }
+.te-card { display: grid; gap: 12px; }
+.te-bi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.te-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.te-row .inp { flex: 1; min-width: 120px; padding: 7px 9px; }
+.te-inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+.te-inline .f { min-width: 140px; }
+.te-sec { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fafbfd; display: grid; gap: 10px; }
+.te-fields { display: grid; gap: 8px; }
+.te-field { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.te-field details { margin-top: 6px; } .te-field summary { cursor: pointer; font-size: 12.5px; color: var(--mute); }
+.te-extra { display: grid; gap: 10px; margin-top: 8px; }
+.te-rule { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+.te-sec.bad, .te-field.bad, .te-rule.bad { border-color: var(--fail); box-shadow: 0 0 0 2px var(--fail-soft); }
+.te-mini { padding: 5px 9px; }
+.grid > * { min-width: 0; } /* wide tables scroll inside their card instead of widening the column */

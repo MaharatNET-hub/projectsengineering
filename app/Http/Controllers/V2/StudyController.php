@@ -5,16 +5,19 @@ namespace App\Http\Controllers\V2;
 use App\Http\Controllers\Controller;
 use App\Mail\V2\StudyNew;
 use App\Mail\V2\StudyReceived;
+use App\Models\V2\Activity;
 use App\Models\V2\Study;
 use App\Review\Extractor;
 use App\Review\Store;
 use App\Studies\FormValidator;
+use App\Studies\Spreadsheet;
 use App\Studies\Studies;
 use App\Studies\StudyTypes;
 use App\Studies\Uploads;
 use App\V2\Site;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -39,9 +42,69 @@ class StudyController extends Controller
         return view('v2.studies.index', ['types' => StudyTypes::all()]);
     }
 
-    public function form(string $type)
+    public function form(Request $r, string $type)
     {
-        return view('v2.studies.form', ['def' => $this->type($type), 'chunk' => self::CHUNK, 'maxMb' => config('studies.max_upload_mb'), 'accept' => array_keys(Uploads::MAGIC)]);
+        $def = $this->type($type);
+        $parent = null;
+        if ($r->filled('from')) {
+            $parent = Study::where('code', strtoupper((string) $r->query('from')))->where('type', $def['key'])->firstOrFail();
+            abort_unless($parent->canResubmit(), 404);
+        }
+        $client = auth('client')->user();
+        // a new revision starts from the previous values; an account fills in its contact details
+        $prefill = $parent ? array_merge($parent->only(['client_name', 'client_company', 'client_email', 'client_phone', 'project_name', 'reference']), ['values' => $parent->values])
+            : ($client ? ['client_name' => $client->name, 'client_company' => $client->company, 'client_email' => $client->email, 'client_phone' => $client->phone] : null);
+        $flags = [];
+        foreach ($parent?->keptFindings() ?? [] as $f) {
+            if (! empty($f['field']) && ! empty($f['section'])) {
+                $flags[] = ['section' => $f['section'], 'field' => $f['field'], 'rows' => $f['rows'] ?? [], 'text' => $f['comment'][app()->getLocale()] ?? $f['comment']['en']];
+            }
+        }
+
+        return view('v2.studies.form', [
+            'def' => $def, 'chunk' => self::CHUNK, 'maxMb' => config('studies.max_upload_mb'), 'accept' => array_keys(Uploads::MAGIC),
+            'parent' => $parent, 'prefill' => $prefill, 'flags' => $flags, 'client' => $client,
+        ]);
+    }
+
+    // ---- the table of a repeated section as a spreadsheet
+
+    private function repeated(array $def, string $section): array
+    {
+        $sec = StudyTypes::section($def, $section);
+        abort_unless($sec && ! empty($sec['repeat']), 404);
+
+        return $sec;
+    }
+
+    public function template(string $type, string $section)
+    {
+        $def = $this->type($type);
+        $this->repeated($def, $section);
+
+        return response(Spreadsheet::template($def, $section, app()->getLocale()), 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $def['key'] . '-' . $section . '.csv"',
+        ]);
+    }
+
+    public function import(Request $r, string $type, string $section): JsonResponse
+    {
+        $def = $this->type($type);
+        $this->repeated($def, $section);
+        $file = $r->file('file');
+        $ext = $file ? strtolower($file->getClientOriginalExtension()) : '';
+        if (! $file || ! $file->isValid() || ! in_array($ext, ['csv', 'xlsx', 'txt'], true) || $file->getSize() > 2 * 1048576) {
+            return response()->json(['error' => __('studies.excel.bad_file')], 422);
+        }
+        try {
+            $res = Spreadsheet::toRows($def, $section, Spreadsheet::read($file->getRealPath(), $ext === 'xlsx' ? 'xlsx' : 'csv'));
+        } catch (\Throwable $e) {
+            return response()->json(['error' => __('studies.excel.bad_file')], 422);
+        }
+        $max = (int) ($def['sections'][array_search($section, array_column($def['sections'], 'key'), true)]['repeat']['max'] ?? 100);
+
+        return response()->json(['rows' => array_slice($res['rows'], 0, $max), 'warnings' => $res['warnings']]);
     }
 
     // ---- supporting file (draft until the form is sent)
@@ -109,24 +172,44 @@ class StudyController extends Controller
             'client_phone' => 'nullable|string|max:40', 'project_name' => 'required|string|max:200', 'reference' => 'nullable|string|max:120',
             'notes' => 'nullable|string|max:3000', 'upload_token' => 'nullable|string|size:32',
         ]);
+        // a new revision of a returned study
+        $parent = null;
+        if ($r->filled('parent_code')) {
+            $parent = Study::where('code', strtoupper((string) $r->input('parent_code')))->where('type', $def['key'])->first();
+            if (! $parent || ! $parent->canResubmit()) {
+                return response()->json(['error' => 'This study cannot be revised.'], 422);
+            }
+        }
         [$values, $errors] = FormValidator::validate($def, $r->input('values'));
         foreach ($contact->errors()->messages() as $k => $m) {
             $errors[$k] = $m[0];
         }
         $token = $r->input('upload_token');
         $hasFile = $token && in_array($token, (array) $r->session()->get('study_uploads', []), true) && (Uploads::meta($token)['done'] ?? false);
-        if (! $hasFile && ($def['file']['required'] ?? true)) {
+        $keepFile = ! $hasFile && $parent && $r->boolean('keep_file') && $parent->filePath();
+        if (! $hasFile && ! $keepFile && ($def['file']['required'] ?? true)) {
             $errors['file'] = __('studies.err.file');
         }
         if ($errors) {
             return response()->json(['message' => __('studies.form.fix'), 'errors' => $errors], 422);
         }
 
+        $client = auth('client')->user();
         $s = Study::create(array_diff_key($contact->validated(), ['upload_token' => 1]) + [
             'type' => $def['key'], 'values' => $values, 'status' => 'submitted', 'locale' => app()->getLocale(),
+            'revision' => $parent ? $parent->revision + 1 : 0, 'parent_id' => $parent?->id,
+            'client_id' => $client?->id ?? $parent?->client_id, 'assigned_to' => $parent?->assigned_to,
         ]);
         if ($hasFile && ($meta = Uploads::attach($token, $s->dir()))) {
             $s->update(['file_name' => $meta['name'], 'file_size' => $meta['size'], 'page_count' => $meta['pages'] ?? null]);
+        } elseif ($keepFile) {
+            // the previous revision's supporting file (and what was read from it) carries over
+            File::ensureDirectoryExists($s->dir());
+            File::copy($parent->filePath(), $s->dir() . '/' . basename($parent->filePath()));
+            if (is_file($parent->dir() . '/extracted.json')) {
+                File::copy($parent->dir() . '/extracted.json', $s->dir() . '/extracted.json');
+            }
+            $s->update(['file_name' => $parent->file_name, 'file_size' => $parent->file_size, 'page_count' => $parent->page_count]);
         }
         // a PDF that was not read for pre-filling is read now, for the comparison with the form
         if (! empty($def['extract']) && $s->isPdf() && ! is_file($s->dir() . '/extracted.json')) {
@@ -134,6 +217,8 @@ class StudyController extends Controller
         }
         Studies::analyse($s);
         Studies::report($s);
+        Activity::forStudy($s, $parent ? 'study.resubmitted' : 'study.submitted', ($parent ? "{$s->revLabel()} of {$parent->code} · " : '')
+            . count($s->analysis['findings'] ?? []) . ' finding(s) · suggested ' . __('studies.decision.' . ($s->analysis['suggested'] ?? 'noted'), [], 'en'));
         $r->session()->push('studies', $s->id);
         $this->notify($s);
 
@@ -173,7 +258,10 @@ class StudyController extends Controller
     {
         $s = Study::where('code', strtoupper($code))->firstOrFail();
 
-        return view('v2.studies.show', ['s' => $s, 'def' => $s->def(), 'showFindings' => $s->isIssued() || config('studies.show_preliminary')]);
+        return view('v2.studies.show', [
+            's' => $s, 'def' => $s->def(), 'showFindings' => $s->isIssued() || config('studies.show_preliminary'),
+            'history' => $s->history(), 'diff' => $s->parent ? \App\Studies\Revisions::diff($s->parent, $s) : null,
+        ]);
     }
 
     public function report(string $code)

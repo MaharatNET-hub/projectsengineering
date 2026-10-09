@@ -29,5 +29,7 @@
       <input class="inp" data-v maxlength="{{ $f['max'] ?? 255 }}" value="{{ $default }}" placeholder="{{ $f['placeholder'] ?? '' }}" autocomplete="off">
   @endswitch
   @if (! empty($f['help']))<small>{{ T::t($f['help']) }}</small>@endif
+  <span class="flag-note" data-flag hidden></span>
+  <span class="live" data-live></span>
   <span class="err" data-err></span>
 </label>

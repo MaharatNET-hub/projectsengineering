@@ -25,4 +25,15 @@ class Activity extends Model
     {
         self::create(['submission_id' => $s?->id, 'user_id' => auth()->id(), 'action' => $action, 'detail' => $detail]);
     }
+
+    public function study()
+    {
+        return $this->belongsTo(Study::class);
+    }
+
+    /** Study timeline entry; the office user is recorded when one is logged in (clients are not users). */
+    public static function forStudy(Study $s, string $action, ?string $detail = null): void
+    {
+        self::create(['study_id' => $s->id, 'user_id' => auth('web')->id(), 'action' => $action, 'detail' => $detail]);
+    }
 }
