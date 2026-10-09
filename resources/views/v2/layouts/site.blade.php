@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('lib/v2/site.css') }}?v={{ filemtime(public_path('lib/v2/site.css')) }}">
+@stack('head')
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2312306b'/%3E%3Ccircle cx='25' cy='25' r='6' fill='%23f2a516'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -21,6 +22,7 @@
       @foreach ($nav as $k => $r)
         <a href="{{ route($r) }}" class="{{ request()->routeIs($r) || ($k === 'projects' && request()->routeIs('v2.project')) ? 'on' : '' }}">{{ __("v2.nav.$k") }}</a>
       @endforeach
+      <a href="{{ route('v2.studies') }}" class="{{ request()->routeIs('v2.studies*') ? 'on' : '' }}">{{ __('studies.nav') }}</a>
       <a href="{{ route('v2.track') }}" class="{{ request()->routeIs('v2.track*') ? 'on' : '' }}">{{ __('v2.nav.track') }}</a>
     </nav>
     <div class="tools">
@@ -43,6 +45,7 @@
         <h4>{{ __('v2.footer.quick') }}</h4>
         @foreach ($nav as $k => $r)<a href="{{ route($r) }}">{{ __("v2.nav.$k") }}</a>@endforeach
         <a href="{{ route('v2.submit') }}">{{ __('v2.nav.submit') }}</a>
+        <a href="{{ route('v2.studies') }}">{{ __('studies.nav') }}</a>
       </div>
       <div>
         <h4>{{ __('v2.footer.reach') }}</h4>

@@ -1,0 +1,86 @@
+{
+  "key": "cable_sizing",
+  "version": 1,
+  "discipline": "Electrical",
+  "icon": "chart",
+  "name": { "en": "Cable sizing & voltage drop study", "ar": "دراسة مقاطع الكابلات وهبوط الجهد" },
+  "summary": {
+    "en": "Enter each circuit's load, length, cable and protective device. The design current, cable capacity after derating and voltage drop are calculated and checked.",
+    "ar": "أدخل لكل دائرة الحمل والطول والكابل وجهاز الحماية، ويحسب النظام تيار التصميم وسعة الكابل بعد معاملات التخفيض وهبوط الجهد ويتحقق منها."
+  },
+  "spec": { "en": "BS 7671 Appendix 4 (indicative tables) – Specification Section 260519", "ar": "BS 7671 الملحق 4 (جداول استرشادية) – المواصفات القسم 260519" },
+  "file": {
+    "required": true,
+    "label": { "en": "Supporting file: cable schedule / calculation printout (PDF)", "ar": "الملف الداعم: جدول الكابلات / مخرجات برنامج الحساب (PDF)" },
+    "hint": { "en": "e.g. the cable schedule or the software report (Amtech, ETAP, DIALux…).", "ar": "مثل جدول الكابلات أو تقرير البرنامج (Amtech، ETAP…)." }
+  },
+  "calc": "cable",
+  "sections": [
+    {
+      "key": "project",
+      "title": { "en": "System data", "ar": "بيانات النظام" },
+      "fields": [
+        { "key": "v3", "type": "number", "required": true, "unit": "V", "min": 200, "max": 1000, "default": 400, "label": { "en": "Line voltage (3-phase)", "ar": "جهد الخط (3 فاز)" } },
+        { "key": "v1", "type": "number", "required": true, "unit": "V", "min": 100, "max": 600, "default": 230, "label": { "en": "Phase voltage (1-phase)", "ar": "جهد الطور (1 فاز)" } },
+        { "key": "vd_lighting", "type": "number", "required": true, "unit": "%", "min": 0.5, "max": 10, "step": 0.1, "default": 3, "label": { "en": "Max. voltage drop – lighting", "ar": "أقصى هبوط جهد – إنارة" } },
+        { "key": "vd_power", "type": "number", "required": true, "unit": "%", "min": 0.5, "max": 10, "step": 0.1, "default": 5, "label": { "en": "Max. voltage drop – power", "ar": "أقصى هبوط جهد – قوى" } }
+      ]
+    },
+    {
+      "key": "circuits",
+      "title": { "en": "Circuits", "ar": "الدوائر" },
+      "repeat": { "min": 1, "max": 120, "title": "tag", "add": { "en": "Add circuit", "ar": "إضافة دائرة" } },
+      "fields": [
+        { "key": "tag", "type": "text", "required": true, "max": 40, "label": { "en": "Circuit / feeder tag", "ar": "رمز الدائرة / المغذي" }, "placeholder": "MDB-1 → SMDB-A" },
+        { "key": "use", "type": "select", "required": true, "label": { "en": "Use", "ar": "الاستخدام" },
+          "options": [ { "value": "power", "label": { "en": "Power", "ar": "قوى" } }, { "value": "lighting", "label": { "en": "Lighting", "ar": "إنارة" } } ] },
+        { "key": "phases", "type": "select", "required": true, "label": { "en": "Phases", "ar": "عدد الأطوار" },
+          "options": [ { "value": "3", "label": { "en": "3-phase", "ar": "3 فاز" } }, { "value": "1", "label": { "en": "1-phase", "ar": "1 فاز" } } ] },
+        { "key": "load_kw", "type": "number", "required": true, "unit": "kW", "min": 0.01, "max": 5000, "step": 0.01, "label": { "en": "Design load", "ar": "الحمل التصميمي" } },
+        { "key": "pf", "type": "number", "required": true, "min": 0.5, "max": 1, "step": 0.01, "default": 0.85, "label": { "en": "Power factor", "ar": "معامل القدرة" } },
+        { "key": "length_m", "type": "number", "required": true, "unit": "m", "min": 1, "max": 2000, "label": { "en": "Route length", "ar": "طول المسار" } },
+        { "key": "material", "type": "select", "required": true, "label": { "en": "Conductor", "ar": "الموصل" },
+          "options": [ { "value": "Cu", "label": { "en": "Copper XLPE/SWA", "ar": "نحاس XLPE/SWA" } }, { "value": "Al", "label": { "en": "Aluminium XLPE/SWA", "ar": "ألمنيوم XLPE/SWA" } } ] },
+        { "key": "size_mm2", "type": "select", "required": true, "unit": "mm²", "label": { "en": "Cable size", "ar": "مقطع الكابل" },
+          "options": [ { "value": "1.5", "label": "1.5" }, { "value": "2.5", "label": "2.5" }, { "value": "4", "label": "4" }, { "value": "6", "label": "6" }, { "value": "10", "label": "10" }, { "value": "16", "label": "16" },
+                       { "value": "25", "label": "25" }, { "value": "35", "label": "35" }, { "value": "50", "label": "50" }, { "value": "70", "label": "70" }, { "value": "95", "label": "95" }, { "value": "120", "label": "120" },
+                       { "value": "150", "label": "150" }, { "value": "185", "label": "185" }, { "value": "240", "label": "240" }, { "value": "300", "label": "300" } ] },
+        { "key": "runs", "type": "number", "required": true, "min": 1, "max": 12, "default": 1, "label": { "en": "Parallel runs", "ar": "عدد الكابلات المتوازية" } },
+        { "key": "derating", "type": "number", "required": true, "min": 0.3, "max": 1.2, "step": 0.01, "default": 1, "label": { "en": "Total derating factor (Ca·Cg·Ci)", "ar": "معامل التخفيض الكلي (Ca·Cg·Ci)" },
+          "help": { "en": "Ambient temperature × grouping × thermal insulation.", "ar": "درجة الحرارة × التجميع × العزل الحراري." } },
+        { "key": "breaker_a", "type": "number", "required": true, "unit": "A", "min": 1, "max": 6300, "label": { "en": "Protective device rating In", "ar": "تيار جهاز الحماية In" } }
+      ]
+    }
+  ],
+  "computed": {
+    "circuits": [
+      { "key": "ib_a", "unit": "A", "label": { "en": "Design current Ib", "ar": "تيار التصميم Ib" } },
+      { "key": "iz_a", "unit": "A", "label": { "en": "Cable capacity Iz (derated)", "ar": "سعة الكابل Iz بعد التخفيض" } },
+      { "key": "vd_pct", "unit": "%", "label": { "en": "Voltage drop", "ar": "هبوط الجهد" } },
+      { "key": "vd_limit", "unit": "%", "label": { "en": "Allowed voltage drop", "ar": "هبوط الجهد المسموح" } }
+    ]
+  },
+  "tables": {
+    "note": "Indicative values: copper XLPE armoured multicore, reference method C (BS 7671 Tables 4E4A/4E4B). Aluminium uses the factors below. Verify against the project's own tables.",
+    "rating_3ph": { "1.5": 25, "2.5": 33, "4": 43, "6": 56, "10": 78, "16": 104, "25": 132, "35": 163, "50": 197, "70": 251, "95": 304, "120": 352, "150": 406, "185": 463, "240": 546, "300": 629 },
+    "rating_1ph": { "1.5": 29, "2.5": 39, "4": 52, "6": 66, "10": 90, "16": 115, "25": 152, "35": 188, "50": 228, "70": 291, "95": 354, "120": 410, "150": 472, "185": 539, "240": 636, "300": 732 },
+    "mv_3ph": { "1.5": 27, "2.5": 16, "4": 10, "6": 6.8, "10": 4.0, "16": 2.5, "25": 1.65, "35": 1.15, "50": 0.87, "70": 0.6, "95": 0.45, "120": 0.37, "150": 0.32, "185": 0.27, "240": 0.23, "300": 0.21 },
+    "mv_1ph": { "1.5": 31, "2.5": 19, "4": 12, "6": 7.9, "10": 4.7, "16": 2.9, "25": 1.9, "35": 1.35, "50": 1.0, "70": 0.69, "95": 0.52, "120": 0.42, "150": 0.35, "185": 0.29, "240": 0.24, "300": 0.21 },
+    "al_rating_factor": 0.78,
+    "al_mv_factor": 1.64
+  },
+  "rules": [
+    { "id": "CB1", "section": "circuits", "field": "breaker_a", "op": "gte", "value": { "ref": "ib_a" }, "severity": "fail",
+      "label": { "en": "Device rating ≥ design current (Ib ≤ In)", "ar": "تيار الحماية ≥ تيار التصميم (Ib ≤ In)" }, "clause": "BS 7671 433.1.1",
+      "comment": { "en": "Protective device {actual} A is below the design current {expected} A. Circuits: {rows}.", "ar": "تيار جهاز الحماية {actual} A أقل من تيار التصميم {expected} A. الدوائر: {rows}." } },
+    { "id": "CB2", "section": "circuits", "field": "iz_a", "op": "gte", "value": { "ref": "breaker_a" }, "severity": "fail",
+      "label": { "en": "Cable capacity ≥ device rating (In ≤ Iz)", "ar": "سعة الكابل ≥ تيار الحماية (In ≤ Iz)" }, "clause": "BS 7671 433.1.1",
+      "comment": { "en": "Cable capacity after derating {actual} A is below the protective device {expected} A — increase the cable size. Circuits: {rows}.", "ar": "سعة الكابل بعد التخفيض {actual} A أقل من تيار جهاز الحماية {expected} A — يجب زيادة المقطع. الدوائر: {rows}." } },
+    { "id": "CB3", "section": "circuits", "field": "vd_pct", "op": "lte", "value": { "ref": "vd_limit" }, "severity": "fail",
+      "label": { "en": "Voltage drop within limit", "ar": "هبوط الجهد ضمن الحد" }, "clause": "BS 7671 Appendix 4 §6.4",
+      "comment": { "en": "Voltage drop {actual}% exceeds the allowed {expected}%. Circuits: {rows}.", "ar": "هبوط الجهد {actual}% يتجاوز المسموح {expected}%. الدوائر: {rows}." } },
+    { "id": "CB4", "section": "circuits", "field": "pf", "op": "gte", "value": 0.8, "severity": "warn",
+      "label": { "en": "Power factor assumption", "ar": "افتراض معامل القدرة" }, "clause": "Engineer",
+      "comment": { "en": "Power factor {actual} is low — confirm the assumption or the correction provided. Circuits: {rows}.", "ar": "معامل القدرة {actual} منخفض — يرجى تأكيد الافتراض أو التصحيح المقترح. الدوائر: {rows}." } }
+  ]
+}

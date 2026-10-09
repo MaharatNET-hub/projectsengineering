@@ -1,0 +1,77 @@
+{
+  "key": "hvac_equipment",
+  "version": 1,
+  "discipline": "Mechanical",
+  "icon": "fan",
+  "name": { "en": "HVAC equipment selection", "ar": "مراجعة اختيار معدات التكييف (HVAC)" },
+  "summary": {
+    "en": "Chillers, AHUs, FCUs and split / VRF units: offered capacity against the design load, efficiency, refrigerant, sound level and power supply.",
+    "ar": "المبردات ووحدات مناولة الهواء ووحدات الملف والمروحة والمكيفات: السعة المقدمة مقابل الحمل التصميمي، الكفاءة، غاز التبريد، مستوى الصوت، ومصدر الكهرباء."
+  },
+  "spec": { "en": "Specification Division 23 – HVAC; ASHRAE 90.1 minimum efficiencies", "ar": "المواصفات القسم 23 – التكييف؛ الحد الأدنى للكفاءة حسب ASHRAE 90.1" },
+  "file": {
+    "required": true,
+    "label": { "en": "Supporting file: equipment selection sheets / catalogue (PDF)", "ar": "الملف الداعم: جداول اختيار المعدات / الكتالوج (PDF)" },
+    "hint": { "en": "The manufacturer's selection printout for each unit.", "ar": "مخرجات برنامج الاختيار من الشركة المصنّعة لكل وحدة." }
+  },
+  "calc": "hvac",
+  "sections": [
+    {
+      "key": "project",
+      "title": { "en": "Design criteria", "ar": "معايير التصميم" },
+      "fields": [
+        { "key": "ambient_c", "type": "number", "required": true, "unit": "°C", "min": 20, "max": 60, "default": 46, "label": { "en": "Outdoor design dry-bulb", "ar": "درجة الحرارة الخارجية التصميمية" } },
+        { "key": "supply", "type": "select", "required": true, "label": { "en": "Available power supply", "ar": "مصدر الكهرباء المتاح" },
+          "options": [ { "value": "400V/3/50", "label": "400 V / 3 ph / 50 Hz" }, { "value": "230V/1/50", "label": "230 V / 1 ph / 50 Hz" }, { "value": "380V/3/60", "label": "380 V / 3 ph / 60 Hz" }, { "value": "220V/1/60", "label": "220 V / 1 ph / 60 Hz" } ] },
+        { "key": "min_eer", "type": "number", "required": true, "unit": "W/W", "min": 1, "max": 8, "step": 0.01, "default": 2.8, "label": { "en": "Minimum full-load EER at design ambient", "ar": "الحد الأدنى لمعامل الكفاءة EER عند الظروف التصميمية" } },
+        { "key": "max_sound", "type": "number", "required": true, "unit": "dB(A)", "min": 20, "max": 110, "default": 75, "label": { "en": "Maximum sound pressure level", "ar": "أقصى مستوى ضغط صوت" } },
+        { "key": "oversize_pct", "type": "number", "required": true, "unit": "%", "min": 0, "max": 100, "default": 20, "label": { "en": "Allowed over-sizing", "ar": "نسبة الزيادة المسموحة في السعة" } }
+      ]
+    },
+    {
+      "key": "units",
+      "title": { "en": "Equipment", "ar": "المعدات" },
+      "repeat": { "min": 1, "max": 80, "title": "tag", "add": { "en": "Add unit", "ar": "إضافة وحدة" } },
+      "fields": [
+        { "key": "tag", "type": "text", "required": true, "max": 40, "label": { "en": "Unit tag", "ar": "رمز الوحدة" }, "placeholder": "AHU-01" },
+        { "key": "type", "type": "select", "required": true, "label": { "en": "Type", "ar": "النوع" },
+          "options": [ { "value": "Chiller", "label": { "en": "Chiller", "ar": "مبرد (Chiller)" } }, { "value": "AHU", "label": "AHU" }, { "value": "FCU", "label": "FCU" }, { "value": "Package", "label": { "en": "Packaged unit", "ar": "وحدة مجمعة (Package)" } }, { "value": "Split", "label": { "en": "Split / VRF", "ar": "سبليت / VRF" } } ] },
+        { "key": "design_kw", "type": "number", "required": true, "unit": "kW", "min": 0.1, "max": 20000, "step": 0.1, "label": { "en": "Design cooling load", "ar": "الحمل التبريدي التصميمي" } },
+        { "key": "offered_kw", "type": "number", "required": true, "unit": "kW", "min": 0.1, "max": 20000, "step": 0.1, "label": { "en": "Offered capacity at design conditions", "ar": "السعة المقدمة عند الظروف التصميمية" } },
+        { "key": "eer", "type": "number", "required": false, "unit": "W/W", "min": 0.5, "max": 10, "step": 0.01, "label": { "en": "Full-load EER", "ar": "معامل الكفاءة EER" },
+          "help": { "en": "Not applicable to chilled-water AHUs / FCUs — leave empty.", "ar": "لا ينطبق على وحدات الماء المبرد — اتركه فارغاً." } },
+        { "key": "refrigerant", "type": "select", "required": false, "label": { "en": "Refrigerant", "ar": "غاز التبريد" },
+          "options": [ { "value": "", "label": { "en": "— (chilled water)", "ar": "— (ماء مبرد)" } }, { "value": "R32", "label": "R32" }, { "value": "R410A", "label": "R410A" }, { "value": "R454B", "label": "R454B" }, { "value": "R134a", "label": "R134a" }, { "value": "R513A", "label": "R513A" }, { "value": "R1234ze", "label": "R1234ze" }, { "value": "R22", "label": "R22" } ] },
+        { "key": "sound_dba", "type": "number", "required": true, "unit": "dB(A)", "min": 10, "max": 130, "label": { "en": "Sound pressure level", "ar": "مستوى ضغط الصوت" } },
+        { "key": "supply", "type": "select", "required": true, "label": { "en": "Unit power supply", "ar": "كهرباء الوحدة" },
+          "options": [ { "value": "400V/3/50", "label": "400 V / 3 ph / 50 Hz" }, { "value": "230V/1/50", "label": "230 V / 1 ph / 50 Hz" }, { "value": "380V/3/60", "label": "380 V / 3 ph / 60 Hz" }, { "value": "220V/1/60", "label": "220 V / 1 ph / 60 Hz" } ] }
+      ]
+    }
+  ],
+  "computed": {
+    "units": [
+      { "key": "capacity_pct", "unit": "%", "label": { "en": "Offered / design", "ar": "السعة المقدمة / التصميمية" } },
+      { "key": "max_kw", "unit": "kW", "label": { "en": "Max. capacity allowed", "ar": "أقصى سعة مسموحة" } }
+    ]
+  },
+  "rules": [
+    { "id": "HV1", "section": "units", "field": "offered_kw", "op": "gte", "value": { "ref": "design_kw" }, "severity": "fail",
+      "label": { "en": "Capacity covers the design load", "ar": "السعة تغطي الحمل التصميمي" }, "clause": "Div. 23 – Equipment schedule",
+      "comment": { "en": "Offered capacity {actual} kW is below the design load {expected} kW. Units: {rows}.", "ar": "السعة المقدمة {actual} kW أقل من الحمل التصميمي {expected} kW. الوحدات: {rows}." } },
+    { "id": "HV2", "section": "units", "field": "offered_kw", "op": "lte", "value": { "ref": "max_kw" }, "severity": "warn",
+      "label": { "en": "Unit not over-sized", "ar": "الوحدة ليست مبالغاً في سعتها" }, "clause": "Engineer",
+      "comment": { "en": "Offered capacity {actual} kW exceeds the design load by more than the allowed margin (max {expected} kW) — justify the selection. Units: {rows}.", "ar": "السعة المقدمة {actual} kW تتجاوز الحمل التصميمي بأكثر من النسبة المسموحة (الحد {expected} kW) — يرجى التبرير. الوحدات: {rows}." } },
+    { "id": "HV3", "section": "units", "when": { "type": ["Chiller", "Package", "Split"] }, "field": "eer", "op": "gte", "value": { "ref": "project.min_eer" }, "severity": "fail",
+      "label": { "en": "Minimum efficiency (EER)", "ar": "الحد الأدنى للكفاءة (EER)" }, "clause": "ASHRAE 90.1 Table 6.8.1",
+      "comment": { "en": "EER {actual} is below the minimum {expected}. Units: {rows}.", "ar": "معامل الكفاءة {actual} أقل من الحد الأدنى {expected}. الوحدات: {rows}." } },
+    { "id": "HV4", "section": "units", "when": { "type": ["Chiller", "Package", "Split"] }, "field": "refrigerant", "op": "notIn", "value": ["R22", ""], "severity": "fail",
+      "label": { "en": "Refrigerant allowed", "ar": "غاز التبريد مسموح" }, "clause": "Montreal Protocol / Div. 23",
+      "comment": { "en": "Refrigerant {actual} is not accepted (HCFC phased out / not declared). Units: {rows}.", "ar": "غاز التبريد {actual} غير مقبول (محظور أو غير مُصرّح به). الوحدات: {rows}." } },
+    { "id": "HV5", "section": "units", "field": "sound_dba", "op": "lte", "value": { "ref": "project.max_sound" }, "severity": "fail",
+      "label": { "en": "Sound level", "ar": "مستوى الصوت" }, "clause": "Div. 23 – Noise criteria",
+      "comment": { "en": "Sound level {actual} dB(A) exceeds the maximum {expected} dB(A); provide attenuation or another selection. Units: {rows}.", "ar": "مستوى الصوت {actual} dB(A) يتجاوز الحد {expected} dB(A)؛ يلزم كاتم صوت أو اختيار آخر. الوحدات: {rows}." } },
+    { "id": "HV6", "section": "units", "field": "supply", "op": "eq", "value": { "ref": "project.supply" }, "severity": "fail",
+      "label": { "en": "Power supply matches the building", "ar": "كهرباء الوحدة مطابقة للمبنى" }, "clause": "Div. 26 coordination",
+      "comment": { "en": "Unit supply {actual} does not match the available {expected}. Units: {rows}.", "ar": "كهرباء الوحدة {actual} لا تطابق المتاح {expected}. الوحدات: {rows}." } }
+  ]
+}

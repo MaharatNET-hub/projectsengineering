@@ -2,12 +2,15 @@
   use App\V2\Site;
   $unread = \App\Models\V2\Message::whereNull('read_at')->count();
   $waiting = \App\Models\V2\Submission::whereIn('status', ['received', 'analysing', 'review'])->count();
+  $studies = \App\Models\V2\Study::whereIn('status', ['submitted', 'review'])->count();
   $items = [
     ['v2.admin.dashboard', 'dash', 'Dashboard', null, 'v2.admin.dashboard'],
     ['v2.admin.submissions', 'clipboard', 'Submissions', $waiting, 'v2.admin.submissions*'],
+    ['v2.admin.studies', 'chart', 'Studies (form)', $studies, 'v2.admin.studies*'],
     ['v2.admin.messages', 'inbox', 'Messages', $unread, 'v2.admin.messages*'],
   ];
   $site = [
+    ['v2.admin.study-types', 'edit', 'Study types', 'v2.admin.study-types*'],
     ['v2.admin.company', 'building', 'Company profile', 'v2.admin.company'],
     ['v2.admin.services.index', 'star', 'Services', 'v2.admin.services.*'],
     ['v2.admin.projects.index', 'file', 'Projects', 'v2.admin.projects.*'],

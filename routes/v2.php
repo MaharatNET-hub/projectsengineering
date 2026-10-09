@@ -7,6 +7,7 @@
 
 use App\Http\Controllers\V2\Admin;
 use App\Http\Controllers\V2\SiteController;
+use App\Http\Controllers\V2\StudyController;
 use App\Http\Controllers\V2\SubmitController;
 use App\Http\Controllers\V2\TrackController;
 use App\Http\Middleware\V2\AdminLocale;
@@ -30,6 +31,16 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
     Route::post('submit/{code}/chunk', [SubmitController::class, 'chunk'])->name('submit.chunk');
     Route::post('submit/{code}/step', [SubmitController::class, 'step'])->name('submit.step');
     Route::get('submit/{code}/thanks', [SubmitController::class, 'thanks'])->name('submit.thanks');
+
+    // study review requests: a form per study type + a supporting file
+    Route::get('studies', [StudyController::class, 'index'])->name('studies');
+    Route::post('studies/upload', [StudyController::class, 'uploadStart'])->middleware('throttle:v2-study')->name('studies.upload');
+    Route::post('studies/upload/{token}/chunk', [StudyController::class, 'uploadChunk'])->name('studies.chunk');
+    Route::post('studies/upload/{token}/extract', [StudyController::class, 'uploadExtract'])->name('studies.extract');
+    Route::get('studies/r/{code}', [StudyController::class, 'show'])->middleware('throttle:v2-track')->name('studies.show');
+    Route::get('studies/r/{code}/report', [StudyController::class, 'report'])->middleware('throttle:v2-track')->name('studies.report');
+    Route::get('studies/{type}', [StudyController::class, 'form'])->name('studies.form');
+    Route::post('studies/{type}', [StudyController::class, 'create'])->middleware('throttle:v2-study')->name('studies.create');
 
     Route::get('track', [TrackController::class, 'form'])->middleware('throttle:v2-track')->name('track');
     Route::get('track/{code}', [TrackController::class, 'show'])->middleware('throttle:v2-track')->name('track.show');
@@ -65,6 +76,20 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
                 Route::post('api/generate', [Admin\WorkspaceController::class, 'generate'])->name('generate');
                 Route::get('out/{name}', [Admin\WorkspaceController::class, 'output'])->where('name', '[A-Za-z0-9._-]+')->name('output');
             });
+
+            Route::get('studies', [Admin\StudyController::class, 'index'])->name('studies');
+            Route::get('studies/{study}', [Admin\StudyController::class, 'show'])->name('studies.show');
+            Route::patch('studies/{study}', [Admin\StudyController::class, 'update'])->name('studies.update');
+            Route::delete('studies/{study}', [Admin\StudyController::class, 'destroy'])->name('studies.destroy');
+            Route::post('studies/{study}/reanalyse', [Admin\StudyController::class, 'reanalyse'])->name('studies.reanalyse');
+            Route::get('studies/{study}/file', [Admin\StudyController::class, 'file'])->name('studies.file');
+            Route::get('studies/{study}/report', [Admin\StudyController::class, 'report'])->name('studies.report');
+            Route::post('studies/{study}/email', [Admin\StudyController::class, 'email'])->name('studies.email');
+
+            Route::get('study-types', [Admin\StudyTypeController::class, 'index'])->name('study-types');
+            Route::get('study-types/{type}', [Admin\StudyTypeController::class, 'edit'])->name('study-types.edit');
+            Route::put('study-types/{type}', [Admin\StudyTypeController::class, 'update'])->name('study-types.update');
+            Route::delete('study-types/{type}', [Admin\StudyTypeController::class, 'reset'])->name('study-types.reset');
 
             Route::get('messages', [Admin\MessageController::class, 'index'])->name('messages');
             Route::get('messages/{message}', [Admin\MessageController::class, 'show'])->name('messages.show');

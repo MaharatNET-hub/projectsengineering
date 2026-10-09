@@ -1,0 +1,90 @@
+{
+  "key": "lv_switchgear",
+  "version": 1,
+  "discipline": "Electrical",
+  "icon": "bolt",
+  "name": { "en": "LV switchgear panels submittal", "ar": "مراجعة لوحات الجهد المنخفض (Switchgear)" },
+  "summary": {
+    "en": "MDB / EMDB / SMDB panel data: degree of protection, form of separation, short-time rating, busbars, auxiliary wiring and anti-condensation heaters.",
+    "ar": "بيانات اللوحات الرئيسية والفرعية: درجة الحماية، شكل الفصل، تحمل تيار القصر، القضبان، أسلاك التحكم، وسخانات منع التكاثف."
+  },
+  "spec": { "en": "Specification Section 262300 – Low-voltage switchboards", "ar": "المواصفات – القسم 262300 لوحات الجهد المنخفض" },
+  "file": {
+    "required": true,
+    "label": { "en": "Supporting file: panel data sheets / GA drawings (PDF)", "ar": "الملف الداعم: جداول بيانات اللوحات / مخططات GA (PDF)" },
+    "hint": { "en": "The file is kept with the study and checked against what you enter.", "ar": "يُحفظ الملف مع الدراسة ويُقارن بالقيم التي تدخلها." }
+  },
+  "extract": "switchgear",
+  "sections": [
+    {
+      "key": "project",
+      "title": { "en": "System data", "ar": "بيانات النظام" },
+      "fields": [
+        { "key": "system_voltage", "type": "select", "required": true, "label": { "en": "System voltage", "ar": "جهد النظام" },
+          "options": [ { "value": "400/230V 3ph 50Hz", "label": { "en": "400/230 V, 3-phase, 50 Hz", "ar": "400/230 فولت، 3 فاز، 50 هرتز" } },
+                       { "value": "380/220V 3ph 60Hz", "label": { "en": "380/220 V, 3-phase, 60 Hz", "ar": "380/220 فولت، 3 فاز، 60 هرتز" } },
+                       { "value": "415/240V 3ph 50Hz", "label": { "en": "415/240 V, 3-phase, 50 Hz", "ar": "415/240 فولت، 3 فاز، 50 هرتز" } } ] },
+        { "key": "fault_level_ka", "type": "number", "required": true, "unit": "kA", "min": 1, "max": 150, "step": 0.1,
+          "label": { "en": "Prospective fault level at the main board", "ar": "مستوى تيار القصر المتوقع عند اللوحة الرئيسية" },
+          "help": { "en": "From the short-circuit study or the utility letter.", "ar": "من دراسة القصر أو خطاب شركة الكهرباء." } },
+        { "key": "manufacturer", "type": "text", "required": true, "max": 120, "label": { "en": "Switchgear manufacturer / licensed builder", "ar": "الشركة المصنّعة / المجمّع المرخّص" } }
+      ]
+    },
+    {
+      "key": "panels",
+      "title": { "en": "Panels", "ar": "اللوحات" },
+      "repeat": { "min": 1, "max": 60, "title": "name", "add": { "en": "Add panel", "ar": "إضافة لوحة" } },
+      "fields": [
+        { "key": "name", "type": "text", "required": true, "max": 40, "label": { "en": "Panel name", "ar": "اسم اللوحة" }, "placeholder": "EMDB-A-1" },
+        { "key": "kind", "type": "select", "required": true, "label": { "en": "Panel type", "ar": "نوع اللوحة" },
+          "options": [ { "value": "MDB", "label": "MDB" }, { "value": "EMDB", "label": "EMDB / ESMDB" }, { "value": "SMDB", "label": "SMDB" }, { "value": "DB", "label": "DB" }, { "value": "MCC", "label": "MCC" } ] },
+        { "key": "rated_a", "type": "number", "required": true, "unit": "A", "min": 16, "max": 6300, "label": { "en": "Rated current", "ar": "التيار المقنن" } },
+        { "key": "icw_ka", "type": "number", "required": true, "unit": "kA", "min": 1, "max": 150, "step": 0.1, "label": { "en": "Short-time withstand Icw (1 s)", "ar": "تحمل القصر Icw (ثانية واحدة)" } },
+        { "key": "ip", "type": "select", "required": true, "label": { "en": "Degree of protection", "ar": "درجة الحماية" },
+          "options": [ { "value": "31", "label": "IP31" }, { "value": "41", "label": "IP41" }, { "value": "42", "label": "IP42" }, { "value": "43", "label": "IP43" }, { "value": "54", "label": "IP54" }, { "value": "55", "label": "IP55" }, { "value": "65", "label": "IP65" } ] },
+        { "key": "form", "type": "select", "required": true, "label": { "en": "Form of separation", "ar": "شكل الفصل" },
+          "options": [ { "value": "1", "label": "Form 1" }, { "value": "2-1", "label": "Form 2 Type 1" }, { "value": "2-2", "label": "Form 2 Type 2" }, { "value": "3a", "label": "Form 3a" }, { "value": "3b", "label": "Form 3b" },
+                       { "value": "4-1", "label": "Form 4 Type 1" }, { "value": "4-2", "label": "Form 4 Type 2" }, { "value": "4-5", "label": "Form 4 Type 5" }, { "value": "4-6", "label": "Form 4 Type 6" }, { "value": "4-7", "label": "Form 4 Type 7" } ] },
+        { "key": "busbar", "type": "select", "required": true, "label": { "en": "Busbar material", "ar": "مادة القضبان" },
+          "options": [ { "value": "Copper", "label": { "en": "Copper", "ar": "نحاس" } }, { "value": "Aluminium", "label": { "en": "Aluminium", "ar": "ألمنيوم" } } ] },
+        { "key": "tin_plated", "type": "bool", "required": true, "label": { "en": "Busbars tin-plated", "ar": "القضبان مطلية بالقصدير" } },
+        { "key": "aux_wire", "type": "select", "required": true, "unit": "mm²", "label": { "en": "Auxiliary / control wiring size", "ar": "مقطع أسلاك التحكم" },
+          "options": [ { "value": "1", "label": "1.0" }, { "value": "1.5", "label": "1.5" }, { "value": "2.5", "label": "2.5" }, { "value": "4", "label": "4.0" } ] },
+        { "key": "heater", "type": "bool", "required": true, "label": { "en": "Anti-condensation heater", "ar": "سخان منع التكاثف" } },
+        { "key": "thermostat", "type": "bool", "required": true, "label": { "en": "Thermostat / hygrostat", "ar": "ثرموستات / هيجروستات" } }
+      ]
+    }
+  ],
+  "rules": [
+    { "id": "SW1", "section": "panels", "when": { "kind": ["EMDB", "SMDB"] }, "field": "ip", "op": "gte", "value": 54, "severity": "fail",
+      "label": { "en": "Degree of protection", "ar": "درجة الحماية" }, "clause": "262300 §2.6.B",
+      "comment": { "en": "Degree of protection to be minimum IP54, submitted {actual}. Panels: {rows}.", "ar": "درجة الحماية يجب ألا تقل عن IP54، المقدَّم {actual}. اللوحات: {rows}." } },
+    { "id": "SW2", "section": "panels", "when": { "kind": ["MDB"] }, "field": "ip", "op": "gte", "value": 41, "severity": "fail",
+      "label": { "en": "Degree of protection (MDB)", "ar": "درجة الحماية (MDB)" }, "clause": "262300 §2.4.A.2",
+      "comment": { "en": "Main distribution board to be at least IP41, submitted {actual}. Panels: {rows}.", "ar": "اللوحة الرئيسية يجب ألا تقل عن IP41، المقدَّم {actual}. اللوحات: {rows}." } },
+    { "id": "SW3", "section": "panels", "when": { "kind": ["EMDB", "MDB"] }, "field": "form", "op": "eq", "value": "4-6", "severity": "fail",
+      "label": { "en": "Form of separation (main boards)", "ar": "شكل الفصل (اللوحات الرئيسية)" }, "clause": "262300 §2.4.A.1",
+      "comment": { "en": "Switchboard construction to be Form 4 Type 6, submitted {actual}. Panels: {rows}.", "ar": "يجب أن يكون شكل الفصل Form 4 Type 6، المقدَّم {actual}. اللوحات: {rows}." } },
+    { "id": "SW4", "section": "panels", "when": { "kind": ["SMDB"] }, "field": "form", "op": "in", "value": ["2-2", "3a", "3b", "4-1", "4-2", "4-5", "4-6", "4-7"], "severity": "fail",
+      "label": { "en": "Form of separation (SMDB)", "ar": "شكل الفصل (SMDB)" }, "clause": "262300 §2.6.B",
+      "comment": { "en": "SMDB to be minimum Form 2 Type 2, submitted {actual}. Panels: {rows}.", "ar": "يجب ألا يقل شكل الفصل للوحات SMDB عن Form 2 Type 2، المقدَّم {actual}. اللوحات: {rows}." } },
+    { "id": "SW5", "section": "panels", "when": { "kind": ["MDB", "EMDB", "SMDB"] }, "field": "icw_ka", "op": "gte", "value": { "ref": "project.fault_level_ka" }, "severity": "fail",
+      "label": { "en": "Short-time withstand vs fault level", "ar": "تحمل القصر مقارنة بمستوى القصر" }, "clause": "262300 §2.2",
+      "comment": { "en": "Icw {actual} kA is below the prospective fault level {expected} kA. Panels: {rows}.", "ar": "قيمة Icw ({actual} kA) أقل من مستوى القصر المتوقع ({expected} kA). اللوحات: {rows}." } },
+    { "id": "SW6", "section": "panels", "field": "aux_wire", "op": "gte", "value": 2.5, "severity": "fail",
+      "label": { "en": "Auxiliary wiring size", "ar": "مقطع أسلاك التحكم" }, "clause": "262300 §2.4.C.1",
+      "comment": { "en": "Auxiliary wiring {actual} mm² not accepted; minimum 2.5 mm². Panels: {rows}.", "ar": "مقطع أسلاك التحكم {actual} مم² غير مقبول؛ الحد الأدنى 2.5 مم². اللوحات: {rows}." } },
+    { "id": "SW7", "section": "panels", "when": { "kind": ["MDB", "EMDB", "SMDB"] }, "field": "busbar", "op": "eq", "value": "Copper", "severity": "fail",
+      "label": { "en": "Busbar material", "ar": "مادة القضبان" }, "clause": "262300 §2.4.B",
+      "comment": { "en": "Busbars to be high-conductivity copper, submitted {actual}. Panels: {rows}.", "ar": "يجب أن تكون القضبان من النحاس عالي التوصيل، المقدَّم {actual}. اللوحات: {rows}." } },
+    { "id": "SW8", "section": "panels", "when": { "kind": ["MDB", "EMDB", "SMDB"] }, "field": "tin_plated", "op": "eq", "value": true, "severity": "warn",
+      "label": { "en": "Busbar tin plating", "ar": "طلاء القضبان بالقصدير" }, "clause": "262300 §2.4.B",
+      "comment": { "en": "Contractor to confirm busbars are tin-plated. Panels: {rows}.", "ar": "على المقاول تأكيد أن القضبان مطلية بالقصدير. اللوحات: {rows}." } },
+    { "id": "SW9", "section": "panels", "when": { "kind": ["MDB", "EMDB", "SMDB"] }, "field": "heater", "op": "eq", "value": true, "severity": "fail",
+      "label": { "en": "Anti-condensation heater", "ar": "سخان منع التكاثف" }, "clause": "262300 §2.4.A.4",
+      "comment": { "en": "Each compartment to have a thermostat-controlled anti-condensation heater; not provided. Panels: {rows}.", "ar": "يجب تزويد كل حجيرة بسخان منع تكاثف يتحكم به ثرموستات؛ غير متوفر. اللوحات: {rows}." } },
+    { "id": "SW10", "section": "panels", "when": { "kind": ["MDB", "EMDB", "SMDB"] }, "field": "thermostat", "op": "eq", "value": true, "severity": "fail",
+      "label": { "en": "Heater thermostat / hygrostat", "ar": "ثرموستات السخان" }, "clause": "262300 §2.4.A.4",
+      "comment": { "en": "Thermostat / hygrostat for the heaters not provided. Panels: {rows}.", "ar": "لم يتم توفير ثرموستات / هيجروستات للسخانات. اللوحات: {rows}." } }
+  ]
+}

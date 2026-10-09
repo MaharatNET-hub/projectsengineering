@@ -1,3 +1,12 @@
+# Engineering Study Review — form + supporting file (experiment)
+
+This repository started as a copy of **Laravel_Technical_Spec** (the Submittal Review Assistant below) to try a
+different intake: instead of only uploading a file and hoping it contains everything, the client **fills a form
+per study type** (the values the checks need) and **attaches the supporting file**. See
+[Study review requests](#study-review-requests-form--supporting-file) — everything else below is unchanged.
+
+---
+
 # Submittal Review Assistant — Laravel
 
 Reads a contractor's technical submittal (PDF from AutoCAD/Word), extracts each panel's values,
@@ -58,3 +67,36 @@ page (never committed — confidential). `.env` and its key are created automati
 - The extraction heuristics were written for the reference submittal's layout (Pioneer / EATON data
   sheets). Check the results — and that a search of the issued PDF finds none of the hidden names — on
   the first run of every new submittal format.
+
+## Study review requests (form + supporting file)
+
+Public: `/v2/studies` → pick a study type → `/v2/studies/{type}` form → result page `/v2/studies/r/{code}`
+(the code also works on `/v2/track`). Admin: **Studies (form)** and **Study types** in the sidebar.
+
+| Step | What happens |
+|---|---|
+| Form | Fields come from the study type's definition: required values, units, min/max, options; rows for panels / circuits / units. Errors are shown next to each field (checked in the browser and again on the server). |
+| Supporting file | Required (PDF, Excel, Word, image, DWG, ZIP). Uploaded in 1 MB chunks to a private draft, then moved into the study's folder. |
+| Fill from file | For LV switchgear, the existing PDF extractor reads the panel data sheets and fills the panel rows; the client checks and completes them. |
+| Automated check | Calculations (cable Ib / Iz / voltage drop, HVAC capacity ratio), then the rules → findings: *non-compliant*, *clarify*, *missing data*, and *form ≠ file* (what the client typed differs from what the PDF shows). A decision is suggested. |
+| Engineer | Untick / reword findings (EN + AR), add comments, choose the action, issue, email. "Run the rules again" keeps the edits. |
+| Report | Web page (Arabic/English, printable) + PDF (English — standard PDF fonts) with the supporting PDF appended. |
+
+Study types shipped (`resources/studies/*.json`): **LV switchgear panels**, **Cable sizing & voltage drop**,
+**HVAC equipment selection**. Add a type by adding a JSON file (and, if it needs derived values, a method in
+`App\Studies\Calculators`). Engineers edit limits, options and wording from **Admin → Study types**; the edited
+copy is saved in `storage/app/studies/types/` and can be reset.
+
+| Path | What |
+|---|---|
+| `resources/studies/*.json` | Study type definitions: sections, fields, rules, computed values, tables |
+| `app/Studies/` | `StudyTypes` (load / edit / validate definitions), `FormValidator`, `Calculators`, `Analyzer` (rules → findings), `CrossCheck` (form vs PDF), `Uploads` (drafts), `Report` (PDF), `Studies` (re-run keeping edits) |
+| `app/Http/Controllers/V2/StudyController.php`, `.../Admin/StudyController.php`, `.../Admin/StudyTypeController.php` | Public flow, engineer review, type editor |
+| `resources/views/v2/studies/`, `resources/views/v2/admin/studies/`, `lang/{ar,en}/studies.php`, `public/lib/v2/studies.css` | Views, translations, styles |
+| `tests/Feature/StudiesTest.php` | Rules, calculations, validation, full public + admin flow |
+
+Settings (`.env`): `STUDIES_MAX_UPLOAD_MB` (50), `STUDIES_SHOW_PRELIMINARY` (true — show the automated check to
+the client immediately; false = status only until the engineer issues), `STUDIES_STEP_SECONDS` (10).
+
+Limits: the cable tables are indicative (BS 7671 4E4A/4E4B, copper XLPE armoured, method C) — set the project's
+own values in the study type. The PDF report cannot print Arabic text (it says so in its place); the web report can.

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V2;
 
 use App\Http\Controllers\Controller;
+use App\Models\V2\Study;
 use App\Models\V2\Submission;
 use Illuminate\Http\Request;
 
@@ -14,9 +15,15 @@ class TrackController extends Controller
         if ($r->filled('code')) {
             $code = strtoupper(trim((string) $r->query('code')));
 
-            return Submission::where('code', $code)->exists()
-                ? redirect()->route('v2.track.show', $code)
-                : view('v2.site.track', ['notFound' => true, 'code' => $code]);
+            if (Submission::where('code', $code)->exists()) {
+                return redirect()->route('v2.track.show', $code);
+            }
+            // study codes (form-based reviews) are tracked on their own result page
+            if (Study::where('code', $code)->exists()) {
+                return redirect()->route('v2.studies.show', $code);
+            }
+
+            return view('v2.site.track', ['notFound' => true, 'code' => $code]);
         }
 
         return view('v2.site.track', ['notFound' => false, 'code' => '']);
