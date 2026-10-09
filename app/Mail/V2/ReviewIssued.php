@@ -14,7 +14,8 @@ class ReviewIssued extends Mailable
 {
     public bool $attached;
 
-    public function __construct(public Submission $s, public string $note = '')
+    /** @param array{subject:string,body:string}|null $letter the engineer's official letter */
+    public function __construct(public Submission $s, public string $note = '', public ?array $letter = null, public ?\App\Models\User $engineer = null)
     {
         $f = $s->outputPath();
         $this->attached = $f !== null && filesize($f) <= config('v2.mail_attach_mb', 8) * 1048576;
@@ -22,7 +23,9 @@ class ReviewIssued extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: "[{$this->s->code}] " . ($this->s->locale === 'ar' ? 'نتيجة مراجعة التقديم' : 'Submittal review') . ': ' . ($this->s->decision ?? '') . ' — ' . Site::name());
+        $subject = $this->letter['subject'] ?? (($this->s->locale === 'ar' ? 'نتيجة مراجعة التقديم' : 'Submittal review') . ': ' . ($this->s->decision ?? ''));
+
+        return new Envelope(subject: "[{$this->s->code}] $subject — " . Site::name(), replyTo: $this->engineer?->email ? [$this->engineer->email] : []);
     }
 
     public function content(): Content

@@ -95,6 +95,18 @@ copy is saved in `storage/app/studies/types/` and can be reset.
 | `resources/views/v2/studies/`, `resources/views/v2/admin/studies/`, `lang/{ar,en}/studies.php`, `public/lib/v2/studies.css` | Views, translations, styles |
 | `tests/Feature/StudiesTest.php` | Rules, calculations, validation, full public + admin flow |
 
+### Categories, engineers and the check (submittals)
+
+| Step | What happens |
+|---|---|
+| **Admin → Categories & criteria** | Each category (or position) has its responsible engineers, its specification PDF (the base file) and its criteria — the rules the check engine applies (IP, form of separation, aux wiring, heaters, consistency, drawing set), each citing a clause and its page in the specification. Categories can start from a copy of another's criteria. Form-based study types can be routed to a category too. |
+| **Client submits** | The submission form asks for the category (required). The request goes to the category's active engineer with the fewest open requests; the upload no longer starts the analysis (Settings → "Analyse automatically" turns that back on). |
+| **Engineer** | Their dashboard lists their requests and the unassigned ones of their categories (take / hand back). Engineers only see and edit those; admins see everything and can reassign. |
+| **Start the check now** | Runs the v1 engine on the file with the category's criteria; the criteria tab links each clause to the specification page. The engineer edits / adds comments, chooses the action and presses *Approve & generate* for the full PDF (transmittal, comment sheet, client comments, marked-up drawings). "Re-run with the current criteria" applies edited criteria. |
+| **Official letter** | "Send to the client" prefills a formal letter in the client's language (subject, body, decision, number of comments); the engineer edits it and it is emailed on letterhead with their name, job title and the company, the reviewed PDF attached. |
+
+Limits: the file reader was built for LV switchgear panel data sheets — for other categories the check finds nothing automatically and the engineer writes the comments in the same screen (the PDF and letter work the same). The PDF uses Latin fonts, so the sign-off name on it should be in Latin letters.
+
 ### Workflow features
 
 | Feature | Where |

@@ -15,6 +15,10 @@ window.APP = {
   csrf: @json(csrf_token()),
   back: @json(route('v2.admin.submissions.show', $s)),
   code: @json($s->code),
+  category: @json($s->category?->name_en),
+  engineer: @json(($s->assignee ?? auth()->user())->name),
+  spec: @json($s->category?->specPath() ? route('v2.admin.categories.spec', $s->category) : null),
+  specTitle: @json($s->category?->spec_title ?: $s->category?->spec_file),
   sub: { file: @json($s->file_name ?? 'submittal.pdf'), size: @json($s->sizeLabel() . ($s->page_count ? ' · ' . $s->page_count . ' pages' : '')) },
 };
 </script>

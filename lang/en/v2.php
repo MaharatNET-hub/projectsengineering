@@ -21,6 +21,7 @@ return [
         'sent' => 'Thank you — your message was sent. We will reply soon.', 'address' => 'Address', 'hours' => 'Working hours',
     ],
     'submit' => [
+        'category' => 'Category', 'category_hint' => 'Your file goes to the engineer responsible for this category and is checked against its specification.', 'err_category' => 'Choose the category of your file.', 
         'title' => 'Submit a technical submittal', 'sub' => 'Upload the contractor\'s or vendor\'s submittal (PDF). You receive a tracking code and the reviewed file by email.',
         'you' => 'Your details', 'company' => 'Company', 'the_submittal' => 'The submittal', 'project' => 'Project name', 'number' => 'Submittal no.', 'discipline' => 'Discipline',
         'title_field' => 'Submittal title', 'notes' => 'Notes for the reviewer', 'file' => 'Submittal PDF', 'file_hint' => 'PDF from AutoCAD or Word, up to :mb MB',

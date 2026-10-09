@@ -1,12 +1,12 @@
 @php
   use App\V2\Site;
   $unread = \App\Models\V2\Message::whereNull('read_at')->count();
-  $waiting = \App\Models\V2\Submission::whereIn('status', ['received', 'analysing', 'review'])->count();
   $me = auth()->user();
+  $waiting = \App\Http\Controllers\V2\Admin\SubmissionController::visible($me)->whereIn('status', ['received', 'analysing', 'review'])->count();
   $studies = \App\Models\V2\Study::whereIn('status', ['submitted', 'review'])->when(! $me->isAdmin(), fn ($q) => $q->where(fn ($w) => $w->whereNull('assigned_to')->orWhere('assigned_to', $me->id)))->count();
   $items = [
     ['v2.admin.dashboard', 'dash', 'Dashboard', null, 'v2.admin.dashboard'],
-    ['v2.admin.submissions', 'clipboard', 'Submissions', $waiting, 'v2.admin.submissions*'],
+    ['v2.admin.submissions', 'inbox', $me->isAdmin() ? 'Submissions' : 'My requests', $waiting, 'v2.admin.submissions*'],
     ['v2.admin.studies', 'clipboard', 'Studies (form)', $studies, 'v2.admin.studies', 'v2.admin.studies.show'],
     ['v2.admin.studies.stats', 'chart', 'Statistics', null, 'v2.admin.studies.stats'],
   ];
@@ -15,6 +15,7 @@
     $items[] = ['v2.admin.clients', 'user', 'Clients', null, 'v2.admin.clients'];
   }
   $site = ! $me->isAdmin() ? [] : [
+    ['v2.admin.categories', 'clipboard', 'Categories & criteria', 'v2.admin.categories*'],
     ['v2.admin.study-types', 'edit', 'Study types', 'v2.admin.study-types*'],
     ['v2.admin.users', 'helmet', 'Users', 'v2.admin.users'],
     ['v2.admin.company', 'building', 'Company profile', 'v2.admin.company'],

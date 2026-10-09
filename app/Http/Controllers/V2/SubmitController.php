@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\V2\NewSubmission;
 use App\Mail\V2\SubmissionReceived;
 use App\Models\V2\Activity;
+use App\Models\V2\Category;
 use App\Models\V2\Submission;
 use App\Pdf\Reader;
 use App\V2\Site;
@@ -26,7 +27,7 @@ class SubmitController extends Controller
 
     public function form()
     {
-        return view('v2.site.submit', ['chunk' => self::CHUNK, 'maxMb' => config('v2.max_upload_mb')]);
+        return view('v2.site.submit', ['chunk' => self::CHUNK, 'maxMb' => config('v2.max_upload_mb'), 'categories' => Category::where('active', true)->orderBy('sort')->orderBy('id')->get()]);
     }
 
     public function create(Request $r): JsonResponse
@@ -37,7 +38,9 @@ class SubmitController extends Controller
         $data = $r->validate([
             'client_name' => 'required|string|max:120', 'client_company' => 'nullable|string|max:160', 'client_email' => 'required|email|max:160',
             'client_phone' => 'nullable|string|max:40', 'project_name' => 'required|string|max:200', 'submittal_no' => 'nullable|string|max:80',
-            'discipline' => 'required|in:Electrical,Mechanical,Plumbing,Fire,Other', 'title' => 'nullable|string|max:255', 'notes' => 'nullable|string|max:3000',
+            'discipline' => 'nullable|in:Electrical,Mechanical,Plumbing,Fire,Other', 'title' => 'nullable|string|max:255', 'notes' => 'nullable|string|max:3000',
+            // the category decides the engineer and the criteria; required as soon as categories exist
+            'category_id' => [Category::where('active', true)->exists() ? 'required' : 'nullable', 'integer', \Illuminate\Validation\Rule::exists('v2_categories', 'id')->where('active', true)],
             'file_name' => 'required|string|max:255', 'file_size' => 'required|integer|min:100',
         ]);
         if ($data['file_size'] > config('v2.max_upload_mb') * 1048576) {
@@ -45,7 +48,9 @@ class SubmitController extends Controller
         }
         $data['file_name'] = basename($data['file_name']);
         $data['locale'] = app()->getLocale();
-        $s = Submission::create($data + ['status' => 'uploading']);
+        $category = ! empty($data['category_id']) ? Category::find($data['category_id']) : null;
+        $data['discipline'] = $category?->discipline ?? ($data['discipline'] ?? 'Other');
+        $s = Submission::create($data + ['status' => 'uploading', 'assigned_to' => $category?->pickEngineer()?->id]);
         $r->session()->push('v2_submissions', $s->id); // only this visitor may upload to / drive it
 
         return response()->json(['code' => $s->code, 'chunk' => self::CHUNK]);
@@ -98,7 +103,10 @@ class SubmitController extends Controller
         }
         rename($part, $s->originalPath());
         $s->update(['status' => 'received', 'file_size' => filesize($s->originalPath()), 'page_count' => $pages]);
-        Activity::log($s, 'submission.received', "{$s->file_name} · $pages pages");
+        Activity::log($s, 'submission.received', "{$s->file_name} · $pages pages" . ($s->category ? " · {$s->category->name_en}" : ''));
+        if ($s->assignee) {
+            Activity::log($s, 'submission.assigned', "to {$s->assignee->name} (category {$s->category->name_en})");
+        }
         Submissions::prepare($s);
         $this->notify($s);
 

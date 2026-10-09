@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\V2\StudyNew;
 use App\Mail\V2\StudyReceived;
 use App\Models\V2\Activity;
+use App\Models\V2\Category;
 use App\Models\V2\Study;
 use App\Review\Extractor;
 use App\Review\Store;
@@ -198,7 +199,9 @@ class StudyController extends Controller
         $s = Study::create(array_diff_key($contact->validated(), ['upload_token' => 1]) + [
             'type' => $def['key'], 'values' => $values, 'status' => 'submitted', 'locale' => app()->getLocale(),
             'revision' => $parent ? $parent->revision + 1 : 0, 'parent_id' => $parent?->id,
-            'client_id' => $client?->id ?? $parent?->client_id, 'assigned_to' => $parent?->assigned_to,
+            'client_id' => $client?->id ?? $parent?->client_id,
+            // a revision goes back to the same engineer; a new study to its category's engineer
+            'assigned_to' => $parent?->assigned_to ?? Category::forStudyType($def['key'])?->pickEngineer()?->id,
         ]);
         if ($hasFile && ($meta = Uploads::attach($token, $s->dir()))) {
             $s->update(['file_name' => $meta['name'], 'file_size' => $meta['size'], 'page_count' => $meta['pages'] ?? null]);

@@ -25,6 +25,16 @@ class Submission extends Model
         static::deleting(fn (self $s) => \Illuminate\Support\Facades\File::deleteDirectory($s->dir()));
     }
 
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function assignee()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'assigned_to');
+    }
+
     public function activities()
     {
         return $this->hasMany(Activity::class)->latest();

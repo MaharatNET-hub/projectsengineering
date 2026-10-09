@@ -11,6 +11,10 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $me = auth()->user();
+        if (! $me->isAdmin()) {
+            return $this->engineer($me);
+        }
         $all = Submission::query();
         $issued = Submission::whereNotNull('issued_at')->get(['created_at', 'issued_at']);
         $hours = $issued->map(fn ($s) => $s->created_at->diffInMinutes($s->issued_at) / 60);
@@ -37,6 +41,22 @@ class DashboardController extends Controller
             'recent' => Submission::latest()->take(8)->get(),
             'activity' => Activity::with('submission', 'study', 'user')->latest()->take(10)->get(),
             'messages' => Message::latest()->take(4)->get(),
+        ]);
+    }
+
+    /** An engineer's dashboard: their requests, what they can take in their categories, their categories. */
+    private function engineer($me)
+    {
+        $cats = $me->categories()->orderBy('sort')->get();
+        $open = ['received', 'analysing', 'review'];
+
+        return view('v2.admin.dashboard-engineer', [
+            'mine' => Submission::with('category')->where('assigned_to', $me->id)->whereIn('status', $open)->oldest()->get(),
+            'free' => Submission::with('category')->whereNull('assigned_to')->whereIn('category_id', $cats->pluck('id'))->whereIn('status', $open)->oldest()->get(),
+            'studies' => \App\Models\V2\Study::where('assigned_to', $me->id)->whereIn('status', ['submitted', 'review'])->oldest()->get(),
+            'issuedMonth' => Submission::where('assigned_to', $me->id)->where('issued_at', '>=', now()->startOfMonth())->count()
+                + \App\Models\V2\Study::where('assigned_to', $me->id)->where('issued_at', '>=', now()->startOfMonth())->count(),
+            'categories' => $cats,
         ]);
     }
 }

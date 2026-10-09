@@ -66,7 +66,7 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
         Route::get('login', [Admin\AuthController::class, 'form'])->name('login');
         Route::post('login', [Admin\AuthController::class, 'login'])->middleware('throttle:v2-login')->name('login.post');
 
-        Route::middleware(['auth', \App\Http\Middleware\V2\ActiveUser::class])->group(function () {
+        Route::middleware(['auth:web', \App\Http\Middleware\V2\ActiveUser::class])->group(function () {
             Route::post('logout', [Admin\AuthController::class, 'logout'])->name('logout');
             Route::get('/', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
@@ -102,6 +102,9 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
             Route::get('studies/{study}/report', [Admin\StudyController::class, 'report'])->name('studies.report');
             Route::post('studies/{study}/email', [Admin\StudyController::class, 'email'])->name('studies.email');
             Route::get('me', [Admin\SettingsController::class, 'me'])->name('me');
+            Route::post('submissions/{submission}/assign', [Admin\SubmissionController::class, 'assign'])->name('submissions.assign');
+            Route::post('submissions/{submission}/restart', [Admin\SubmissionController::class, 'restart'])->name('submissions.restart');
+            Route::get('categories/{category}/spec', [Admin\CategoryController::class, 'spec'])->name('categories.spec');
 
             // admins only: website content, settings, users, clients, study types, deleting studies
             Route::middleware('v2.admin')->group(function () {
@@ -112,6 +115,16 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
                 Route::get('study-types/{type}', [Admin\StudyTypeController::class, 'edit'])->name('study-types.edit');
                 Route::put('study-types/{type}', [Admin\StudyTypeController::class, 'update'])->name('study-types.update');
                 Route::delete('study-types/{type}', [Admin\StudyTypeController::class, 'reset'])->name('study-types.reset');
+
+                Route::get('categories', [Admin\CategoryController::class, 'index'])->name('categories');
+                Route::get('categories/create', [Admin\CategoryController::class, 'create'])->name('categories.create');
+                Route::post('categories', [Admin\CategoryController::class, 'store'])->name('categories.store');
+                Route::get('categories/{category}/edit', [Admin\CategoryController::class, 'edit'])->name('categories.edit');
+                Route::put('categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');
+                Route::delete('categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
+                Route::post('categories/{category}/spec', [Admin\CategoryController::class, 'uploadSpec'])->name('categories.spec.upload');
+                Route::delete('categories/{category}/spec', [Admin\CategoryController::class, 'deleteSpec'])->name('categories.spec.delete');
+                Route::put('categories/{category}/rules', [Admin\CategoryController::class, 'rules'])->name('categories.rules');
 
                 Route::get('users', [Admin\UserController::class, 'index'])->name('users');
                 Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');

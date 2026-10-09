@@ -41,7 +41,7 @@ async function load() {
   if (r) {
     S.comments = r.comments.map(c => ({ ...c, orig: r.draftComments.find(d => d.rule === c.rule && d.status === c.status)?.text }));
     S.decision = r.decision;
-    S.engineer = r.engineerName || '';
+    S.engineer = r.engineerName || window.APP.engineer || '';
   }
 }
 
@@ -95,9 +95,10 @@ function homeView() {
   const sub = window.APP.sub;
   return `<div class="proc card pad">
     <div class="label">Submission ${esc(window.APP.code)}</div>
-    <h1 style="margin-top:4px">Not analysed yet</h1>
-    <div class="mute" style="margin:6px 0 18px">${esc(sub.file)} · ${esc(sub.size)} — the assistant reads every page, checks it against the rules and drafts the comment sheet.</div>
-    <button class="btn primary" type="button" data-run-sample>${I.check}Run analysis</button>
+    <h1 style="margin-top:4px">Not checked yet</h1>
+    <div class="mute" style="margin:6px 0 6px">${esc(sub.file)} · ${esc(sub.size)} — the assistant reads every page, checks it against the criteria of <b>${esc(window.APP.category || 'the default template')}</b> and drafts the comment sheet.</div>
+    ${window.APP.spec ? `<div style="margin:0 0 18px"><a href="${window.APP.spec}" target="_blank" rel="noopener">${I.check} Specification: ${esc(window.APP.specTitle || 'open')} ↗</a></div>` : '<div class="mute" style="margin:0 0 18px">No specification file uploaded for this category.</div>'}
+    <button class="btn primary" type="button" data-run-sample>${I.check}Start the check now</button>
     <a class="btn" href="${window.APP.back}" style="margin-inline-start:8px">Back</a>
   </div>`;
 }
@@ -107,7 +108,7 @@ const STEPS = [
   ['Receiving file', 'Upload and validate the PDF'],
   ['Reading pages', 'Text + coordinates from every page'],
   ['Identifying panels & extracting values', 'Title blocks, data-sheet check boxes, part lists'],
-  ['Checking against PART F', 'Applying active rules from Section 262300'],
+  ['Checking against the specification', 'Applying the criteria of the category'],
   ['Drafting comments & marking up the PDF', 'Grouping findings, stamping, boxing non-compliant values'],
 ];
 const P = { step: 0, pct: 0, detail: '' };
@@ -155,7 +156,7 @@ async function runReview(file) {
 /* ---------------- workspace ---------------- */
 function wsView() {
   const r = S.data.review, p = r.project, st = r.stats;
-  const tabs = [['comments', 'Comment sheet', S.comments.length], ['panels', 'Panels', st.panels], ['drawings', 'Marked-up drawings', st.markedPages], ['rules', 'Rules', r.rules.filter(x => x.active !== false).length], ['accuracy', 'vs. engineer', null]];
+  const tabs = [['comments', 'Comment sheet', S.comments.length], ['panels', 'Panels', st.panels], ['drawings', 'Marked-up drawings', st.markedPages], ['rules', 'Criteria', r.rules.filter(x => x.active !== false).length]];
   const revise = /Revise|Reject/.test(S.decision);
   return `
   <div class="ws-head">
@@ -167,7 +168,7 @@ function wsView() {
     <div class="decision">
       <div><div class="label" style="margin-bottom:4px">Action ${r.final ? '' : `<span class="chip accent" style="text-transform:none;letter-spacing:0">suggested: ${esc(r.suggested)}</span>`}</div>
       <select id="decision" class="${revise ? 'revise' : ''}">${DECISIONS.map(d => `<option ${d === S.decision ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
-      <div><div class="label" style="margin-bottom:4px">Engineer</div><input id="engineer" placeholder="Name for sign-off" value="${esc(S.engineer)}" style="border:1px solid var(--line2);border-radius:9px;padding:8px 10px;background:var(--panel);width:170px"></div>
+      <div><div class="label" style="margin-bottom:4px">Engineer</div><input id="engineer" placeholder="Name for sign-off" value="${esc(S.engineer || window.APP.engineer || '')}" style="border:1px solid var(--line2);border-radius:9px;padding:8px 10px;background:var(--panel);width:170px"></div>
       <div style="align-self:flex-end;display:flex;gap:8px">
         <a class="btn" href="${outUrl(r)}" download="${esc(r.pdfName)}">${I.down}${r.final ? 'Download' : 'Draft PDF'}</a>
         <button class="btn primary" data-generate>${I.check}Approve &amp; generate</button>
@@ -180,7 +181,7 @@ function wsView() {
     <div class="card kpi"><b>${st.checks}</b><span>checks run</span></div>
     <div class="card kpi fail"><b>${st.fail}</b><span>non-compliances</span></div>
     <div class="card kpi warn"><b>${st.unclear}</b><span>need clarification</span></div>
-    <div class="card kpi ok"><b>${S.doneIn ? S.doneIn.toFixed(0) + ' s' : '< 1 min'}</b><span>to draft · manual cycle took 19 days</span></div>
+    <div class="card kpi ok"><b>${S.doneIn ? S.doneIn.toFixed(0) + ' s' : '< 1 min'}</b><span>to draft the review</span></div>
   </div>
   <div class="tabs">${tabs.map(([k, n, c]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${n}${c != null ? ` <span class="count">${c}</span>` : ''}</button>`).join('')}</div>
   <div id="tab">${({ comments: commentsTab, panels: panelsTab, drawings: drawingsTab, rules: rulesTab, accuracy: accuracyTab })[S.tab]()}</div>`;
@@ -306,7 +307,7 @@ function rulesTab() {
       <div class="id">${x.id}</div>
       <div>
         <b>${esc(x.label)}</b> <span class="mute">· ${x.appliesTo.map(a => a === '*' ? 'all panels' : a).join(', ')}</span>
-        <blockquote>${x.clause.section === '—' ? esc(x.clause.path) : `Section ${esc(x.clause.section)} › ${esc(x.clause.path)}${x.clause.specPage ? ` <span class="mute">(PART F p.${x.clause.specPage})</span>` : ''}`} — “${esc(x.clause.text)}”</blockquote>
+        <blockquote>${x.clause.section === '—' ? esc(x.clause.path) : `Section ${esc(x.clause.section)} › ${esc(x.clause.path)}${x.clause.specPage ? (window.APP.spec ? ` <a href="${window.APP.spec}#page=${x.clause.specPage}" target="_blank" rel="noopener">(specification p.${x.clause.specPage} ↗)</a>` : ` <span class="mute">(specification p.${x.clause.specPage})</span>`) : ''}`} — “${esc(x.clause.text)}”</blockquote>
         ${x.note ? `<div class="note">⚠ ${esc(x.note)}</div>` : ''}
       </div>
       <div class="ctl">
@@ -413,3 +414,5 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#drawer')
 await load();
 if (S.data.review) { const [v, tab] = location.hash.slice(1).split('/'); S.view = 'ws'; S.tab = (v === 'ws' && tab) || 'comments'; }
 render();
+// "Start the check now" on the request page lands here with ?start=1
+if (!S.data.review && new URLSearchParams(location.search).get('start')) { history.replaceState(null, '', location.pathname); runReview(); }

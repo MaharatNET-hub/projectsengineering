@@ -30,7 +30,9 @@ class V2Test extends TestCase
     private function submit(): Submission
     {
         $pdf = ReviewPipelineTest::submittal();
+        $this->get('/v2/submit')->assertOk()->assertSee('لوحات الجهد المنخفض والتوزيع'); // the installer seeds the categories
         $code = $this->postJson('/v2/submit', [
+            'category_id' => \App\Models\V2\Category::where('slug', 'lv-switchgear')->value('id'),
             'client_name' => 'Sara Haddad', 'client_company' => 'Pioneer Dynamics Switchgear', 'client_email' => 'sara@example.com',
             'project_name' => 'City Walk Phase 5', 'discipline' => 'Electrical', 'title' => 'LV switchgear', 'file_name' => 'sub.pdf', 'file_size' => strlen($pdf),
         ])->assertOk()->json('code');

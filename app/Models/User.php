@@ -23,6 +23,7 @@ class User extends Authenticatable
         'password',
         'role',
         'active',
+        'title',
     ];
 
     public const ROLES = ['admin', 'engineer'];
@@ -49,6 +50,12 @@ class User extends Authenticatable
             'password' => 'hashed',
             'active' => 'boolean',
         ];
+    }
+
+    /** The categories (positions) this engineer is responsible for. */
+    public function categories()
+    {
+        return $this->belongsToMany(\App\Models\V2\Category::class, 'v2_category_user');
     }
 
     /** Admins manage everything; engineers review studies and submittals. */

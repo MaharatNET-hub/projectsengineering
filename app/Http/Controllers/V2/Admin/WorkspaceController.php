@@ -35,6 +35,10 @@ class WorkspaceController extends DemoController
         if (! $submission->hasOriginal()) {
             return response()->json(['error' => 'The original PDF is not on the server (it may have been removed by a host restart).'], 404);
         }
+        if (! $submission->assigned_to) {
+            $submission->update(['assigned_to' => auth()->id()]); // whoever starts the check takes the request
+            Activity::log($submission, 'submission.assigned', 'to ' . auth()->user()->name . ' (started the check)');
+        }
         try {
             $job = Submissions::start($submission);
         } catch (\Throwable $e) {

@@ -16,14 +16,14 @@ class UserController extends Controller
         $open = Study::whereIn('status', ['submitted', 'review'])->whereNotNull('assigned_to')->selectRaw('assigned_to, count(*) as n')->groupBy('assigned_to')->pluck('n', 'assigned_to');
         $issued = Study::where('status', 'issued')->whereNotNull('assigned_to')->selectRaw('assigned_to, count(*) as n')->groupBy('assigned_to')->pluck('n', 'assigned_to');
 
-        return view('v2.admin.users', ['users' => User::orderByDesc('active')->orderBy('name')->get(), 'open' => $open, 'issued' => $issued]);
+        return view('v2.admin.users', ['users' => User::with('categories')->orderByDesc('active')->orderBy('name')->get(), 'open' => $open, 'issued' => $issued]);
     }
 
     public function store(Request $r)
     {
         $data = $r->validate([
             'name' => 'required|string|max:120', 'email' => 'required|email|max:160|unique:users,email',
-            'role' => ['required', Rule::in(User::ROLES)], 'password' => 'required|string|min:10',
+            'role' => ['required', Rule::in(User::ROLES)], 'password' => 'required|string|min:10', 'title' => 'nullable|string|max:120',
         ]);
         User::create($data + ['active' => true]);
 
@@ -34,14 +34,14 @@ class UserController extends Controller
     {
         $data = $r->validate([
             'name' => 'required|string|max:120', 'role' => ['required', Rule::in(User::ROLES)],
-            'active' => 'nullable|boolean', 'password' => 'nullable|string|min:10',
+            'active' => 'nullable|boolean', 'password' => 'nullable|string|min:10', 'title' => 'nullable|string|max:120',
         ]);
         $active = (bool) ($data['active'] ?? false);
         // never lock the last way in: you cannot demote or deactivate yourself
         if ($user->is($r->user()) && ($data['role'] !== 'admin' || ! $active)) {
             return back()->with('bad', 'You cannot remove your own admin role or deactivate yourself.');
         }
-        $user->fill(['name' => $data['name'], 'role' => $data['role'], 'active' => $active]);
+        $user->fill(['name' => $data['name'], 'role' => $data['role'], 'active' => $active, 'title' => $data['title'] ?? null]);
         if (! empty($data['password'])) {
             $user->password = $data['password'];
         }

@@ -5,7 +5,7 @@
     @csrf @method('put')
     <h2>Submittal review</h2>
     <label class="check"><input type="checkbox" name="hide_default" value="1" @checked($rv['hide_default'])> Hide client details by default in new reviews <span class="mute" style="font-weight:400">(client disclosure)</span></label>
-    <label class="check"><input type="checkbox" name="auto_analyse" value="1" @checked($rv['auto_analyse'])> Analyse automatically right after the client uploads</label>
+    <label class="check"><input type="checkbox" name="auto_analyse" value="1" @checked($rv['auto_analyse'])> Analyse automatically right after the client uploads <span class="mute" style="font-weight:400">(off: the engineer starts the check)</span></label>
     <label class="f">Notify this address of new submissions <small>(blank = the company email)</small><input class="inp" type="email" name="notify_email" value="{{ $rv['notify_email'] }}"></label>
     <div><button class="btn primary">Save</button></div>
   </form>

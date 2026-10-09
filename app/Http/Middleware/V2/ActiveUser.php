@@ -11,7 +11,7 @@ class ActiveUser
 {
     public function handle(Request $request, Closure $next)
     {
-        if ($request->user() && ! $request->user()->active) {
+        if ($request->user() && $request->user()->active === false) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
 

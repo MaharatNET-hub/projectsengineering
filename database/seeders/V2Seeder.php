@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\V2\Category;
 use App\Models\V2\Project;
 use App\Models\V2\Service;
 use App\Models\V2\Setting;
@@ -25,6 +26,27 @@ class V2Seeder extends Seeder
         }
         if (! Project::query()->exists()) {
             $this->projects();
+        }
+        if (! Category::query()->exists()) {
+            $this->categories();
+        }
+    }
+
+    /** Starting categories: LV switchgear with the reference criteria; the others are reviewed by hand until criteria are added. */
+    private function categories(): void
+    {
+        $demo = json_decode((string) file_get_contents(resource_path('demo/rules.json')), true);
+        $list = [
+            ['lv-switchgear', 'LV switchgear & distribution boards', 'لوحات الجهد المنخفض والتوزيع', 'Electrical', $demo['rules'], $demo['project']['specDocument'] ?? null, ['lv_switchgear', 'cable_sizing'],
+                'Panel data sheets, GA drawings, SLDs and material lists of MDB / EMDB / SMDB / DB.', 'جداول بيانات اللوحات ومخططات GA والمخططات الأحادية وقوائم المواد.'],
+            ['hvac', 'HVAC equipment', 'معدات التكييف والتهوية', 'Mechanical', [], null, ['hvac_equipment'],
+                'Chillers, AHUs, FCUs, VRF and ventilation equipment.', 'المبردات ووحدات مناولة الهواء ووحدات الملف والمروحة وأنظمة VRF والتهوية.'],
+            ['plumbing-fire', 'Plumbing & fire protection', 'الصحي ومكافحة الحريق', 'Plumbing', [], null, [],
+                'Pumps, pipes, valves, sprinklers and fire alarm equipment.', 'المضخات والأنابيب والمحابس والرشاشات وأنظمة إنذار الحريق.'],
+        ];
+        foreach ($list as $i => [$slug, $en, $ar, $disc, $rules, $spec, $types, $den, $dar]) {
+            Category::create(['slug' => $slug, 'name_en' => $en, 'name_ar' => $ar, 'discipline' => $disc, 'rules' => $rules, 'spec_title' => $spec,
+                'study_types' => $types, 'description_en' => $den, 'description_ar' => $dar, 'sort' => $i]);
         }
     }
 
@@ -80,7 +102,7 @@ class V2Seeder extends Seeder
                 ['value' => '3,800', 'label_en' => 'Submittals reviewed', 'label_ar' => 'تقديم تمت مراجعته'],
                 ['value' => '45', 'label_en' => 'Engineers', 'label_ar' => 'مهندس'],
             ],
-            'review' => ['hide_default' => true, 'notify_email' => '', 'auto_analyse' => true],
+            'review' => ['hide_default' => true, 'notify_email' => '', 'auto_analyse' => false],
         ];
         foreach ($defaults as $k => $v) {
             if (Setting::find($k) === null) {

@@ -15,11 +15,17 @@ use Illuminate\Support\Facades\File;
  */
 final class Submissions
 {
-    /** Prepare the review folder: project details from the form + the rule template. */
-    public static function prepare(Submission $s): void
+    /**
+     * Prepare the review folder: project details from the form + the criteria of the submission's category
+     * (the reference template when it has none). $fresh re-reads the category's current criteria.
+     */
+    public static function prepare(Submission $s, bool $fresh = false): void
     {
         File::ensureDirectoryExists($s->dir());
-        $cfg = json_decode((string) file_get_contents(resource_path('demo/rules.json')), true);
+        if (! $fresh && is_file($s->dir() . '/rules.json')) {
+            return;
+        }
+        $cfg = $s->category ? $s->category->rulesConfig() : json_decode((string) file_get_contents(resource_path('demo/rules.json')), true);
         $company = Site::t(Site::company(), 'name');
         $cfg['project'] = [
             'name' => $s->project_name,
@@ -30,7 +36,7 @@ final class Submissions
             'title' => $s->title ?: 'Technical submittal',
             'vendor' => $s->client_company ?: $s->client_name,
             'specDocument' => $cfg['project']['specDocument'] ?? 'Project specification',
-            'discipline' => $s->discipline,
+            'discipline' => $s->category?->name_en ?? $s->discipline,
             'submittedAt' => $s->created_at?->format('d-M-Y') ?? date('d-M-Y'),
             'purpose' => 'Submitted for review and approval',
             'parties' => array_filter(['consultant' => $company, 'mainContractor' => $s->client_company]),

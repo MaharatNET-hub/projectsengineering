@@ -48,7 +48,7 @@ final class Site
 
     public static function review(): array
     {
-        return Setting::get('review', []) + ['hide_default' => true, 'notify_email' => '', 'auto_analyse' => true];
+        return Setting::get('review', []) + ['hide_default' => true, 'notify_email' => '', 'auto_analyse' => false];
     }
 
     /** Same page in the other language. */

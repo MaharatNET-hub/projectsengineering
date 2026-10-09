@@ -1,4 +1,13 @@
 @extends('v2.layouts.site', ['title' => __('v2.submit.title')])
+@push('head')
+<style>
+.cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.cat { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; background: #fff; }
+.cat:has(input:checked) { border-color: var(--brand2); box-shadow: 0 0 0 3px rgb(31 79 191 / .12); background: #f7f9ff; }
+.cat input { margin-top: 5px; }
+.cat b { display: block; font-size: 15px; } .cat small { display: block; color: var(--mute); font-size: 13px; line-height: 1.5; margin-top: 2px; }
+</style>
+@endpush
 @section('content')
 <section class="page-head"><div class="wrap"><h1>{{ __('v2.submit.title') }}</h1><p>{{ __('v2.submit.sub') }}</p></div></section>
 <section class="block">
@@ -20,10 +29,23 @@
           <label class="f">{{ __('v2.submit.project') }} *<input class="inp" name="project_name" required maxlength="200"></label>
           <label class="f">{{ __('v2.submit.number') }}<input class="inp" name="submittal_no" maxlength="80" dir="ltr"></label>
         </div>
-        <div class="row2">
+        @if ($categories->isNotEmpty())
+          <div>
+            <div class="f" style="font-weight:600;font-size:14.5px;color:var(--ink2);margin-bottom:8px">{{ __('v2.submit.category') }} *</div>
+            <div class="cats" id="cats">
+              @foreach ($categories as $c)
+                <label class="cat"><input type="radio" name="category_id" value="{{ $c->id }}"><span><b>{{ $c->t('name') }}</b>@if ($c->t('description'))<small>{{ $c->t('description') }}</small>@endif</span></label>
+              @endforeach
+            </div>
+            <small class="mute">{{ __('v2.submit.category_hint') }}</small>
+          </div>
           <label class="f">{{ __('v2.submit.title_field') }}<input class="inp" name="title" maxlength="255"></label>
-          <label class="f">{{ __('v2.submit.discipline') }}<select class="inp" name="discipline">@foreach (__('v2.submit.disciplines') as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></label>
-        </div>
+        @else
+          <div class="row2">
+            <label class="f">{{ __('v2.submit.title_field') }}<input class="inp" name="title" maxlength="255"></label>
+            <label class="f">{{ __('v2.submit.discipline') }}<select class="inp" name="discipline">@foreach (__('v2.submit.disciplines') as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></label>
+          </div>
+        @endif
         <label class="f">{{ __('v2.submit.notes') }}<textarea class="inp" name="notes" maxlength="3000" style="min-height:90px"></textarea></label>
         <div>
           <div class="f" style="font-weight:600;font-size:14.5px;color:var(--ink2);margin-bottom:6px">{{ __('v2.submit.file') }} *</div>
@@ -49,7 +71,7 @@
   </div>
 </section>
 @push('scripts')
-@php $texts = ['uploading' => __('v2.submit.uploading'), 'analysing' => __('v2.submit.analysing'), 'done' => __('v2.submit.done'), 'pdf' => __('v2.submit.err_pdf'), 'size' => __('v2.submit.err_size', ['mb' => $maxMb]), 'required' => __('v2.errors.required')]; @endphp
+@php $texts = ['uploading' => __('v2.submit.uploading'), 'analysing' => __('v2.submit.analysing'), 'done' => __('v2.submit.done'), 'pdf' => __('v2.submit.err_pdf'), 'size' => __('v2.submit.err_size', ['mb' => $maxMb]), 'required' => __('v2.errors.required'), 'category' => __('v2.submit.err_category')]; @endphp
 <script>
 (() => {
   const T = {!! json_encode($texts, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!};
@@ -84,6 +106,7 @@
     e.preventDefault(); showErr('');
     const form = e.target;
     for (const el of form.querySelectorAll('[required]')) if (!el.value.trim()) { el.focus(); return showErr(T.required); }
+    if (document.getElementById('cats') && !form.querySelector('[name=category_id]:checked')) { document.getElementById('cats').scrollIntoView({ block: 'center' }); return showErr(T.category); }
     if (!file) return showErr(T.pdf);
     const btn = $('go'); btn.disabled = true;
     try {

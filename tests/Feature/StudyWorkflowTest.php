@@ -102,7 +102,10 @@ class StudyWorkflowTest extends TestCase
         $this->actingAs($omar);
         $this->patch("/v2/admin/studies/{$s->id}", ['action' => 'issue', 'decision' => 'revise', 'findings' => [['include' => 1]]])->assertSessionHas('ok');
         $this->get("/v2/admin/studies/{$s->id}")->assertSee('study issued')->assertSee('Revise and resubmit')->assertSee('study assigned')->assertSee('study submitted');
-        $this->get('/v2/admin')->assertOk()->assertSee($s->code);
+        $this->get('/v2/admin')->assertOk()->assertSee('My requests');
+        auth('web')->logout();
+        $this->actingAs($this->admin());
+        $this->get('/v2/admin')->assertOk()->assertSee($s->code); // the admin dashboard lists the activity
         auth('web')->logout();
 
         // a deactivated engineer cannot log in; their open studies are released
@@ -220,7 +223,7 @@ class StudyWorkflowTest extends TestCase
 
         // a client account is not an office user
         $this->get('/v2/admin/studies')->assertRedirect('/v2/admin/login');
-        $this->actingAs($this->admin());
+        $this->actingAs($this->admin(), 'web');
         $this->get('/v2/admin/clients')->assertOk()->assertSee('sara@example.com');
     }
 
