@@ -1,14 +1,14 @@
 <?php
 
 return [
-    'nav' => ['home' => 'Home', 'about' => 'About us', 'services' => 'Services', 'projects' => 'Projects', 'contact' => 'Contact', 'submit' => 'Submit a submittal', 'submit_short' => 'Submit a file', 'track' => 'Track', 'admin' => 'Admin'],
+    'nav' => ['home' => 'Home', 'about' => 'About us', 'services' => 'Services', 'projects' => 'Projects', 'contact' => 'Contact', 'submit' => 'Request a study review', 'submit_short' => 'Request a review', 'track' => 'Track', 'admin' => 'Admin'],
     'lang_switch' => 'العربية',
-    'hero' => ['eyebrow' => 'Engineering consultants', 'cta' => 'Submit a submittal for review', 'cta2' => 'Our projects'],
+    'hero' => ['eyebrow' => 'Engineering consultants', 'cta' => 'Request a study review', 'cta2' => 'Our projects'],
     'home' => [
         'services_title' => 'What we do', 'services_sub' => 'Design, supervision and technical review across every MEP discipline.',
         'projects_title' => 'Selected projects', 'projects_sub' => 'A few of the projects our engineers have designed, supervised or reviewed.',
-        'review_title' => 'Submittal review in days, not weeks',
-        'review_sub' => 'Upload a technical submittal. Our review assistant reads every page, checks each value against the project specification and drafts the comment sheet — then our engineer reviews, edits and signs it.',
+        'review_title' => 'Study reviews in days, not weeks',
+        'review_sub' => 'Pick the type of study, enter the values it needs and attach your supporting file. Every value is checked against the specification at once — then our engineer reviews and signs the report.',
         'review_points' => ['Every page read: cover sheets, data sheets, SLDs, GA drawings, part lists', 'Each non-compliance linked to the specification clause', 'Marked-up PDF and comment sheet returned by email', 'Client details can be withheld from any shared copy'],
         'all_projects' => 'All projects', 'all_services' => 'All services',
     ],

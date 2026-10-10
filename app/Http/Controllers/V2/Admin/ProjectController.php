@@ -25,7 +25,7 @@ class ProjectController extends Controller
         $p = new Project;
         $this->save($r, $p);
 
-        return redirect()->route('v2.admin.projects.index')->with('ok', 'Project added.');
+        return redirect()->route('v2.admin.projects.index')->with('ok', __('Project added.'));
     }
 
     public function edit(Project $project)
@@ -37,7 +37,7 @@ class ProjectController extends Controller
     {
         $this->save($r, $project);
 
-        return redirect()->route('v2.admin.projects.index')->with('ok', 'Project saved.');
+        return redirect()->route('v2.admin.projects.index')->with('ok', __('Project saved.'));
     }
 
     public function destroy(Project $project)
@@ -47,7 +47,7 @@ class ProjectController extends Controller
         }
         $project->delete();
 
-        return back()->with('ok', 'Project deleted.');
+        return back()->with('ok', __('Project deleted.'));
     }
 
     private function save(Request $r, Project $p): void

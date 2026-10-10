@@ -6,6 +6,9 @@ return [
     'admin_email' => env('V2_ADMIN_EMAIL', 'admin@example.com'),
     'admin_password' => env('V2_ADMIN_PASSWORD', ''),
 
+    // dashboard language until the user switches it (ar or en)
+    'admin_locale' => env('V2_ADMIN_LOCALE', 'ar'),
+
     // public site language: ar or en
     'locale' => env('V2_LOCALE', 'ar'),
 

@@ -96,7 +96,7 @@ class CategoriesTest extends TestCase
         $fire = Category::where('name_en', 'Fire alarm')->firstOrFail();
         $this->assertSame('fire-alarm', $fire->slug);
         $this->assertCount(3, $fire->rules);
-        $this->get('/v2/submit')->assertSee('إنذار الحريق');
+        $this->assertTrue($fire->active);
 
         // engineers cannot manage categories
         auth('web')->logout();
@@ -183,5 +183,34 @@ class CategoriesTest extends TestCase
             'values' => ['project' => ['v3' => 400, 'v1' => 230, 'vd_lighting' => 3, 'vd_power' => 5], 'circuits' => [['tag' => 'C1', 'use' => 'power', 'phases' => '3', 'load_kw' => '10', 'pf' => '0.9', 'length_m' => '20', 'material' => 'Cu', 'size_mm2' => '10', 'runs' => '1', 'derating' => '1', 'breaker_a' => '25']]]])
             ->assertOk()->json('code');
         $this->assertSame($this->sami->id, \App\Models\V2\Study::where('code', $code)->value('assigned_to'));
+    }
+    public function test_a_study_file_goes_through_the_category_check(): void
+    {
+        $this->lv->engineers()->sync([$this->sami->id]);
+        $pdf = ReviewPipelineTest::submittal();
+        $token = $this->postJson('/v2/studies/upload', ['file_name' => 'panels.pdf', 'file_size' => strlen($pdf)])->json('token');
+        $this->call('POST', "/v2/studies/upload/$token/chunk?index=0&total=1", [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], $pdf)->assertOk();
+        $code = $this->postJson('/v2/studies/cable_sizing', ['client_name' => 'A', 'client_email' => 'a@example.com', 'project_name' => 'P', 'upload_token' => $token,
+            'values' => ['project' => ['v3' => 400, 'v1' => 230, 'vd_lighting' => 3, 'vd_power' => 5], 'circuits' => [['tag' => 'C1', 'use' => 'power', 'phases' => '3', 'load_kw' => '10', 'pf' => '0.9', 'length_m' => '20', 'material' => 'Cu', 'size_mm2' => '10', 'runs' => '1', 'derating' => '1', 'breaker_a' => '25']]]])
+            ->assertOk()->json('code');
+        $study = \App\Models\V2\Study::where('code', $code)->firstOrFail();
+
+        $this->actingAs($this->lina, 'web');
+        $this->post("/v2/admin/studies/{$study->id}/check")->assertForbidden(); // assigned to Sami
+
+        $this->actingAs($this->sami, 'web');
+        $this->get("/v2/admin/studies/{$study->id}")->assertOk()->assertSee("/v2/admin/studies/{$study->id}/check", false);
+        $res = $this->post("/v2/admin/studies/{$study->id}/check");
+        $sub = Submission::where('study_id', $study->id)->firstOrFail();
+        $res->assertRedirect(route('v2.admin.submissions.workspace', [$sub, 'start' => 1]));
+        $this->assertSame($this->lv->id, $sub->category_id);
+        $this->assertSame($this->sami->id, $sub->assigned_to);
+        $this->assertTrue($sub->hasOriginal());
+        $this->assertFileExists($sub->dir() . '/rules.json');
+        $this->get(route('v2.admin.submissions.workspace', $sub))->assertOk();
+
+        // a second click opens the same check
+        $this->post("/v2/admin/studies/{$study->id}/check")->assertRedirect(route('v2.admin.submissions.workspace', $sub));
+        $this->assertSame(1, Submission::where('study_id', $study->id)->count());
     }
 }

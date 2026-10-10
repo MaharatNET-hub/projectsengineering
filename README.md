@@ -124,3 +124,12 @@ the client immediately; false = status only until the engineer issues), `STUDIES
 
 Limits: the cable tables are indicative (BS 7671 4E4A/4E4B, copper XLPE armoured, method C) — set the project's
 own values in the study type. The PDF report cannot print Arabic text (it says so in its place); the web report can.
+
+### Website and dashboard look (v2)
+
+- **Public site:** the study forms are the only way to send work (`/v2/submit` redirects to `/v2/studies`). The home page opens with an animated banner: slides fade with a slow zoom, autoplay, arrows, dots and swipe. Under it are the study type cards, then scroll-in animations and counters. Admin → **Home banner** edits up to 6 slides: upload a photo (1600 × 700 px or wider) or keep a built-in drawing, with English and Arabic titles.
+- **Dashboard:** dark navy theme with a light mode (toggle in the top bar, remembered per browser), a split-screen sign-in, and KPI cards with colored edges and icon tiles.
+- **Dashboard languages:** Arabic (RTL) or English, switched from the top bar or the sign-in page. Labels live in `lang/ar.json`. The default is `V2_ADMIN_LOCALE` (`ar`). The PDF check screen (workspace) stays in English.
+- **Checking a study's file with the category engine:** on a study whose supporting file is a PDF, **Check the file against the category criteria**:
+  - creates one linked submission, with the category taken from the study type and the same engineer
+  - opens the check screen, where the engineer adds comments, downloads the full PDF and sends the letter as for submittals

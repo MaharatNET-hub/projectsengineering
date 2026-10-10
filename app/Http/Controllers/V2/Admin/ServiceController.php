@@ -24,7 +24,7 @@ class ServiceController extends Controller
     {
         Service::create($this->data($r));
 
-        return redirect()->route('v2.admin.services.index')->with('ok', 'Service added.');
+        return redirect()->route('v2.admin.services.index')->with('ok', __('Service added.'));
     }
 
     public function edit(Service $service)
@@ -36,14 +36,14 @@ class ServiceController extends Controller
     {
         $service->update($this->data($r));
 
-        return redirect()->route('v2.admin.services.index')->with('ok', 'Service saved.');
+        return redirect()->route('v2.admin.services.index')->with('ok', __('Service saved.'));
     }
 
     public function destroy(Service $service)
     {
         $service->delete();
 
-        return back()->with('ok', 'Service deleted.');
+        return back()->with('ok', __('Service deleted.'));
     }
 
     private function data(Request $r): array

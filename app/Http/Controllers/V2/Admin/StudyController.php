@@ -6,11 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Mail\V2\StudyIssued;
 use App\Models\User;
 use App\Models\V2\Activity;
+use App\Models\V2\Category;
 use App\Models\V2\Study;
+use App\Models\V2\Submission;
+use App\V2\Submissions;
 use App\Studies\Analyzer;
 use App\Studies\Studies;
 use App\Studies\StudyTypes;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 
 /** The engineer's side of a study: check the automated findings, edit them, decide and issue. */
@@ -116,7 +120,7 @@ class StudyController extends Controller
         $study->finding_count = count($study->keptFindings());
         if (($data['action'] ?? 'save') === 'issue') {
             if (! $study->decision) {
-                return back()->withInput()->with('bad', 'Choose the action (decision) before issuing.');
+                return back()->withInput()->with('bad', __('Choose the action (decision) before issuing.'));
             }
             $study->status = 'issued';
             $study->issued_at ??= now();
@@ -151,7 +155,40 @@ class StudyController extends Controller
         Activity::forStudy($study, 'study.reanalysed', count($study->keptFindings()) . ' finding(s)');
         Studies::report($study);
 
-        return back()->with('ok', 'The rules were run again with the current study-type definition (your edits to matching findings were kept).');
+        return back()->with('ok', __('The rules were run again with the current study-type definition (your edits to matching findings were kept).'));
+    }
+
+    /**
+     * Check the study's supporting PDF with the category engine: a linked submission is made once (same category
+     * and engineer) and the engineer goes to the check screen, which reads the file against the category criteria.
+     */
+    public function check(Study $study)
+    {
+        abort_unless($this->canEdit($study), 403, 'This study is assigned to another engineer.');
+        if (! $study->isPdf()) {
+            return back()->with('bad', __('The study has no PDF file to check.'));
+        }
+        $sub = Submission::where('study_id', $study->id)->first();
+        if ($sub && $sub->hasOriginal()) {
+            return redirect()->route('v2.admin.submissions.workspace', $sub);
+        }
+        $category = Category::forStudyType($study->type);
+        $sub ??= Submission::create([
+            'study_id' => $study->id, 'status' => 'received', 'category_id' => $category?->id,
+            'assigned_to' => $study->assigned_to ?? auth()->id(), 'engineer' => $study->engineer,
+            'client_name' => $study->client_name, 'client_company' => $study->client_company, 'client_email' => $study->client_email,
+            'client_phone' => $study->client_phone, 'project_name' => $study->project_name, 'submittal_no' => $study->reference,
+            'discipline' => $category?->discipline ?? 'Other', 'title' => $study->typeName('en'), 'locale' => $study->locale,
+            'file_name' => $study->file_name ?: 'study.pdf',
+        ]);
+        File::ensureDirectoryExists($sub->dir());
+        File::copy($study->filePath(), $sub->originalPath());
+        $sub->update(['file_size' => filesize($sub->originalPath()), 'page_count' => $study->page_count]);
+        Submissions::prepare($sub, true);
+        Activity::log($sub, 'submission.received', "from study {$study->code}" . ($category ? " · {$category->name_en}" : ''));
+        Activity::forStudy($study, 'study.checked', "file sent to the category check ({$sub->code})");
+
+        return redirect()->route('v2.admin.submissions.workspace', [$sub, 'start' => 1]);
     }
 
     public function file(Study $study)
@@ -173,7 +210,7 @@ class StudyController extends Controller
     {
         $data = $r->validate(['note' => 'nullable|string|max:3000', 'to' => 'nullable|email']);
         if (! $study->isIssued()) {
-            return back()->with('bad', 'Issue the review first.');
+            return back()->with('bad', __('Issue the review first.'));
         }
         Studies::report($study);
         $to = ($data['to'] ?? null) ?: $study->client_email;

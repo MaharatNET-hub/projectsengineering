@@ -77,7 +77,7 @@ class SiteController extends Controller
     /** Project images uploaded from the dashboard (served without needing storage:link). */
     public function media(string $path)
     {
-        abort_unless(preg_match('#^v2/projects/[A-Za-z0-9._-]+$#', $path), 404);
+        abort_unless(preg_match('#^v2/(projects|banner)/[A-Za-z0-9._-]+$#', $path), 404);
         $f = storage_path('app/public/' . $path);
         abort_unless(is_file($f), 404);
 

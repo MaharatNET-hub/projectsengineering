@@ -31,7 +31,7 @@ class SettingsController extends Controller
         Setting::put('contact', array_map(fn ($v) => $v ?? '', $d['c'] ?? []));
         Setting::put('stats', array_values(array_filter($d['stats'] ?? [], fn ($s) => trim((string) ($s['value'] ?? '')) !== '')));
 
-        return back()->with('ok', 'Company profile saved — it is live on the website.');
+        return back()->with('ok', __('Company profile saved — it is live on the website.'));
     }
 
     public function settings()
@@ -44,7 +44,7 @@ class SettingsController extends Controller
         $d = $r->validate(['notify_email' => 'nullable|email|max:160']);
         Setting::put('review', ['hide_default' => $r->boolean('hide_default'), 'auto_analyse' => $r->boolean('auto_analyse'), 'notify_email' => $d['notify_email'] ?? '']);
 
-        return back()->with('ok', 'Settings saved.');
+        return back()->with('ok', __('Settings saved.'));
     }
 
     /** Every office user (admins and engineers) can change their own password here. */

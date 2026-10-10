@@ -25,6 +25,6 @@ class MessageController extends Controller
     {
         $message->delete();
 
-        return redirect()->route('v2.admin.messages')->with('ok', 'Message deleted.');
+        return redirect()->route('v2.admin.messages')->with('ok', __('Message deleted.'));
     }
 }

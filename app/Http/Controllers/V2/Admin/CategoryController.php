@@ -61,7 +61,7 @@ class CategoryController extends Controller
         ]);
         $c->engineers()->sync($d['engineers'] ?? []);
 
-        return redirect()->route('v2.admin.categories.edit', $c)->with('ok', 'Category created. Upload its specification and set its criteria below.');
+        return redirect()->route('v2.admin.categories.edit', $c)->with('ok', __('Category created. Upload its specification and set its criteria below.'));
     }
 
     public function update(Request $r, Category $category)
@@ -74,7 +74,7 @@ class CategoryController extends Controller
         ]);
         $category->engineers()->sync($d['engineers'] ?? []);
 
-        return back()->with('ok', 'Category saved.');
+        return back()->with('ok', __('Category saved.'));
     }
 
     private function types(array $d): array
@@ -109,7 +109,7 @@ class CategoryController extends Controller
         $file = $r->file('spec');
         $bytes = (string) file_get_contents($file->getRealPath());
         if (! str_starts_with($bytes, '%PDF')) {
-            return back()->with('bad', 'The specification must be a PDF file.');
+            return back()->with('bad', __('The specification must be a PDF file.'));
         }
         try {
             $pages = count((new Reader($bytes))->pages());
@@ -138,7 +138,7 @@ class CategoryController extends Controller
         @unlink($category->dir() . '/spec.pdf');
         $category->update(['spec_file' => null, 'spec_size' => 0]);
 
-        return back()->with('ok', 'Specification removed.');
+        return back()->with('ok', __('Specification removed.'));
     }
 
     // ---- the criteria (rules of the check engine)

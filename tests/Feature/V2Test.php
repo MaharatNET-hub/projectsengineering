@@ -30,7 +30,7 @@ class V2Test extends TestCase
     private function submit(): Submission
     {
         $pdf = ReviewPipelineTest::submittal();
-        $this->get('/v2/submit')->assertOk()->assertSee('لوحات الجهد المنخفض والتوزيع'); // the installer seeds the categories
+        $this->get('/v2/submit')->assertRedirect('/v2/studies'); // clients use the study form; the upload API stays for existing integrations
         $code = $this->postJson('/v2/submit', [
             'category_id' => \App\Models\V2\Category::where('slug', 'lv-switchgear')->value('id'),
             'client_name' => 'Sara Haddad', 'client_company' => 'Pioneer Dynamics Switchgear', 'client_email' => 'sara@example.com',
@@ -49,7 +49,7 @@ class V2Test extends TestCase
 
     public function test_public_pages_in_both_languages(): void
     {
-        foreach (['/v2', '/v2/about', '/v2/services', '/v2/projects', '/v2/projects/hospital-retrofit', '/v2/contact', '/v2/submit', '/v2/track'] as $url) {
+        foreach (['/v2', '/v2/about', '/v2/services', '/v2/projects', '/v2/projects/hospital-retrofit', '/v2/contact', '/v2/studies', '/v2/track'] as $url) {
             $this->get($url)->assertOk()->assertSee('dir="rtl"', false);
         }
         $this->get('/v2?lang=en')->assertOk()->assertSee('dir="ltr"', false)->assertSee('Atlas Engineering Consultants');

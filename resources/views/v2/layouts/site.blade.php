@@ -22,13 +22,12 @@
       @foreach ($nav as $k => $r)
         <a href="{{ route($r) }}" class="{{ request()->routeIs($r) || ($k === 'projects' && request()->routeIs('v2.project')) ? 'on' : '' }}">{{ __("v2.nav.$k") }}</a>
       @endforeach
-      <a href="{{ route('v2.studies') }}" class="{{ request()->routeIs('v2.studies*') ? 'on' : '' }}">{{ __('studies.nav') }}</a>
       <a href="{{ route('v2.track') }}" class="{{ request()->routeIs('v2.track*') ? 'on' : '' }}">{{ __('v2.nav.track') }}</a>
     </nav>
     <div class="tools">
       <a class="lang" href="{{ auth('client')->check() ? route('v2.account') : route('v2.account.login') }}">{{ auth('client')->check() ? __('studies.account.menu') : __('studies.account.login') }}</a>
       <a class="lang" href="{{ Site::switchUrl() }}" hreflang="{{ Site::ar() ? 'en' : 'ar' }}">{{ __('v2.lang_switch') }}</a>
-      <a class="btn primary" href="{{ route('v2.submit') }}"><x-v2.icon name="upload"/>{{ __('v2.nav.submit_short') }}</a>
+      <a class="btn glow" href="{{ route('v2.studies') }}"><x-v2.icon name="clipboard"/>{{ __('v2.nav.submit_short') }}</a>
     </div>
   </div>
 </header>
@@ -45,8 +44,8 @@
       <div>
         <h4>{{ __('v2.footer.quick') }}</h4>
         @foreach ($nav as $k => $r)<a href="{{ route($r) }}">{{ __("v2.nav.$k") }}</a>@endforeach
-        <a href="{{ route('v2.submit') }}">{{ __('v2.nav.submit') }}</a>
         <a href="{{ route('v2.studies') }}">{{ __('studies.nav') }}</a>
+        <a href="{{ route('v2.track') }}">{{ __('v2.nav.track') }}</a>
       </div>
       <div>
         <h4>{{ __('v2.footer.reach') }}</h4>
@@ -58,6 +57,23 @@
     <div class="bottom"><span>© {{ date('Y') }} {{ Site::name() }}. {{ __('v2.footer.rights') }}</span><a href="{{ route('v2.admin.dashboard') }}" style="display:inline;color:#64748b">{{ __('v2.nav.admin') }}</a></div>
   </div>
 </footer>
+<script>
+// cards and sections rise in as they scroll into view; numbers count up once
+(() => {
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const els = document.querySelectorAll('.reveal');
+  if (still || !('IntersectionObserver' in window)) { els.forEach(e => e.classList.add('in')); return; }
+  const count = el => {
+    const m = String(el.dataset.count).match(/^([^\d]*)([\d,.]+)(.*)$/); if (!m) return;
+    const end = parseFloat(m[2].replace(/,/g, '')), dec = (m[2].split('.')[1] || '').length, t0 = performance.now();
+    const step = t => { const k = Math.min(1, (t - t0) / 1200), v = end * (1 - Math.pow(1 - k, 3));
+      el.textContent = m[1] + v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + m[3]; if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
+  const io = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting) return; e.target.classList.add('in'); e.target.querySelectorAll('[data-count]').forEach(count); io.unobserve(e.target); }), { threshold: .12 });
+  els.forEach(e => io.observe(e));
+})();
+</script>
 @stack('scripts')
 </body>
 </html>

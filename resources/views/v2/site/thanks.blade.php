@@ -10,7 +10,7 @@
     <p class="mute" style="margin-top:16px">{{ __('v2.submit.keep') }}</p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:24px">
       <a class="btn primary" href="{{ route('v2.track.show', $s->code) }}">{{ __('v2.submit.track_it') }}</a>
-      <a class="btn line" href="{{ route('v2.submit') }}">{{ __('v2.submit.another') }}</a>
+      <a class="btn line" href="{{ route('v2.studies') }}">{{ __('v2.submit.another') }}</a>
     </div>
   </div>
 </section>

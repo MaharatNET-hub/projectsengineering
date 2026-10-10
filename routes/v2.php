@@ -27,7 +27,8 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
     Route::post('contact', [SiteController::class, 'contactSend'])->middleware('throttle:v2-contact')->name('contact.send');
     Route::get('media/{path}', [SiteController::class, 'media'])->where('path', '.*')->name('media');
 
-    Route::get('submit', [SubmitController::class, 'form'])->name('submit');
+    // one way in for clients: the study form (the old file-only form now leads there)
+    Route::get('submit', fn () => redirect()->route('v2.studies', [], 301))->name('submit');
     Route::post('submit', [SubmitController::class, 'create'])->middleware('throttle:v2-submit')->name('submit.create');
     Route::post('submit/{code}/chunk', [SubmitController::class, 'chunk'])->name('submit.chunk');
     Route::post('submit/{code}/step', [SubmitController::class, 'step'])->name('submit.step');
@@ -63,6 +64,11 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
 
     // ---- admin
     Route::prefix('admin')->name('admin.')->middleware(AdminLocale::class)->group(function () {
+        Route::get('lang/{lang}', function (string $lang) {
+            session(['admin_locale' => $lang === 'en' ? 'en' : 'ar']);
+
+            return back();
+        })->where('lang', 'ar|en')->name('lang');
         Route::get('login', [Admin\AuthController::class, 'form'])->name('login');
         Route::post('login', [Admin\AuthController::class, 'login'])->middleware('throttle:v2-login')->name('login.post');
 
@@ -99,6 +105,7 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
             Route::post('studies/{study}/assign', [Admin\StudyController::class, 'assign'])->name('studies.assign');
             Route::post('studies/{study}/reanalyse', [Admin\StudyController::class, 'reanalyse'])->name('studies.reanalyse');
             Route::get('studies/{study}/file', [Admin\StudyController::class, 'file'])->name('studies.file');
+            Route::post('studies/{study}/check', [Admin\StudyController::class, 'check'])->name('studies.check');
             Route::get('studies/{study}/report', [Admin\StudyController::class, 'report'])->name('studies.report');
             Route::post('studies/{study}/email', [Admin\StudyController::class, 'email'])->name('studies.email');
             Route::get('me', [Admin\SettingsController::class, 'me'])->name('me');
@@ -125,6 +132,9 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
                 Route::post('categories/{category}/spec', [Admin\CategoryController::class, 'uploadSpec'])->name('categories.spec.upload');
                 Route::delete('categories/{category}/spec', [Admin\CategoryController::class, 'deleteSpec'])->name('categories.spec.delete');
                 Route::put('categories/{category}/rules', [Admin\CategoryController::class, 'rules'])->name('categories.rules');
+
+                Route::get('banner', [Admin\BannerController::class, 'index'])->name('banner');
+                Route::put('banner', [Admin\BannerController::class, 'update'])->name('banner.update');
 
                 Route::get('users', [Admin\UserController::class, 'index'])->name('users');
                 Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');

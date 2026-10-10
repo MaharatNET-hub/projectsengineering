@@ -21,7 +21,7 @@ class AuthController extends Controller
     {
         $cred = $r->validate(['email' => 'required|email', 'password' => 'required|string']);
         if (! Auth::attempt($cred + ['active' => true], $r->boolean('remember'))) {
-            return back()->withErrors(['email' => 'Wrong email or password.'])->onlyInput('email');
+            return back()->withErrors(['email' => __('Wrong email or password.')])->onlyInput('email');
         }
         $r->session()->regenerate();
 

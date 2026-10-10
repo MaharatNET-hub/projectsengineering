@@ -143,7 +143,7 @@ class SubmissionController extends Controller
             Activity::log($submission, 'status.' . $data['status'], 'changed by hand');
         }
 
-        return back()->with('ok', 'Status updated.');
+        return back()->with('ok', __('Status updated.'));
     }
 
     public function destroy(Submission $submission)
@@ -187,10 +187,10 @@ class SubmissionController extends Controller
 
         $data = $r->validate(['note' => 'nullable|string|max:3000', 'to' => 'nullable|email', 'letter_subject' => 'nullable|string|max:255', 'letter_body' => 'nullable|string|max:8000']);
         if (! $submission->outputPath()) {
-            return back()->with('bad', 'Generate the reviewed PDF first.');
+            return back()->with('bad', __('Generate the reviewed PDF first.'));
         }
         if (! ($submission->review()['final'] ?? false)) {
-            return back()->with('bad', 'The review is still a draft: open the analysis and press "Approve & generate" first.');
+            return back()->with('bad', __('The review is still a draft: open the analysis and press "Approve & generate" first.'));
         }
         $to = ($data['to'] ?? null) ?: $submission->client_email;
         try {

@@ -5,12 +5,16 @@ namespace App\Http\Middleware\V2;
 use Closure;
 use Illuminate\Http\Request;
 
-/** The dashboard is in English (like the review tool and the issued documents), whatever the site language. */
+/**
+ * The dashboard speaks Arabic or English — the user's choice (the language button in the top bar),
+ * remembered in the session. The review tool and the issued PDF stay in English.
+ */
 class AdminLocale
 {
     public function handle(Request $request, Closure $next)
     {
-        app()->setLocale('en');
+        $loc = $request->session()->get('admin_locale', config('v2.admin_locale', 'ar'));
+        app()->setLocale(in_array($loc, ['ar', 'en'], true) ? $loc : 'en');
 
         return $next($request);
     }

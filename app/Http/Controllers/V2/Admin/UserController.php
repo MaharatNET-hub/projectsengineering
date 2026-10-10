@@ -39,7 +39,7 @@ class UserController extends Controller
         $active = (bool) ($data['active'] ?? false);
         // never lock the last way in: you cannot demote or deactivate yourself
         if ($user->is($r->user()) && ($data['role'] !== 'admin' || ! $active)) {
-            return back()->with('bad', 'You cannot remove your own admin role or deactivate yourself.');
+            return back()->with('bad', __('You cannot remove your own admin role or deactivate yourself.'));
         }
         $user->fill(['name' => $data['name'], 'role' => $data['role'], 'active' => $active, 'title' => $data['title'] ?? null]);
         if (! empty($data['password'])) {
