@@ -111,7 +111,7 @@
     'file' => __('studies.err.file'), 'required' => __('studies.err.required'), 'number' => __('studies.err.number'), 'fix' => __('studies.form.fix'), 'row' => __('studies.form.row'),
     'imported' => __('studies.excel.done'), 'badImport' => __('studies.excel.bad_file'), 'expected' => __('studies.live.expected'), 'flagged' => __('studies.rev.flagged'), 'yes' => __('studies.form.yes'), 'no' => __('studies.form.no'),
     'up' => __('studies.up.d.uploading'), 'opening' => __('studies.up.d.opening'), 'page' => __('studies.up.d.page'), 'applying' => __('studies.up.d.checking', ['spec' => $spec]),
-    'marking' => __('studies.up.d.marking'), 'lead' => __('studies.up.lead')];
+    'marking' => __('studies.up.d.marking'), 'lead' => __('studies.up.lead'), 'expired' => __('studies.err.expired')];
   // the rules the browser can check while typing (calculated values are only checked on the server)
   $computed = [];
   foreach ($def['computed'] ?? [] as $secKey => $list) {
@@ -128,13 +128,13 @@
       $live[] = ['section' => $rule['section'], 'field' => $rule['field'], 'op' => $rule['op'], 'value' => $rule['value'], 'when' => $rule['when'] ?? [], 'label' => T::t($rule['label'] ?? $rule['field'])];
   }
   $cfg = ['texts' => $texts, 'max' => $maxMb * 1048576, 'chunk' => $chunk, 'accept' => $accept, 'extract' => ! empty($def['extract']), 'fileRequired' => (bool) ($def['file']['required'] ?? true),
-    'urls' => ['upload' => route('v2.studies.upload'), 'chunk' => url('v2/studies/upload/__T__/chunk'), 'extract' => url('v2/studies/upload/__T__/extract'), 'create' => route('v2.studies.create', $def['key']), 'step' => url('v2/studies/r/__C__/step'), 'import' => url('v2/studies/' . $def['key'] . '/import/__S__')],
+    'urls' => ['upload' => route('v2.studies.upload'), 'chunk' => url('v2/studies/upload/__T__/chunk'), 'extract' => url('v2/studies/upload/__T__/extract'), 'create' => route('v2.studies.create', $def['key']), 'csrf' => route('v2.csrf'), 'step' => url('v2/studies/r/__C__/step'), 'import' => url('v2/studies/' . $def['key'] . '/import/__S__')],
     'prefill' => $prefill, 'flags' => $flags, 'parent' => (bool) $parent, 'rules' => $live, 'draftKey' => 'study-draft-' . $def['key'], 'check' => (bool) $category];
 @endphp
 <script>
 (() => {
   const C = {!! json_encode($cfg, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_UNESCAPED_SLASHES) !!}, T = C.texts;
-  const csrf = document.querySelector('meta[name=csrf-token]').content;
+  let csrf = document.querySelector('meta[name=csrf-token]').content;
   const $ = id => document.getElementById(id), form = $('sf');
   let file = null, token = null, uploaded = false, extracted = null;
 
@@ -315,13 +315,24 @@
   drop.addEventListener('dragleave', () => drop.classList.remove('over'));
   drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); pick(e.dataTransfer.files[0]); });
 
-  const post = async (url, body, json = true) => {
+  // the page's token goes stale when it stays open for hours or someone signs in/out in another tab:
+  // fetch a fresh one and send again, so a filled form is never lost to "CSRF token mismatch"
+  const renew = async () => {
+    const r = await fetch(C.urls.csrf, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+    csrf = (await r.json()).token; document.querySelector('meta[name=csrf-token]').content = csrf;
+  };
+  const post = async (url, body, json = true, again = true) => {
     const res = await fetch(url, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', ...(json ? { 'Content-Type': 'application/json' } : {}) }, body: json ? JSON.stringify(body) : body });
+    if (res.status === 419 && again) { await renew(); return post(url, body, json, false); }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) { const e = new Error(data.error || data.message || ('Error ' + res.status)); e.data = data; throw e; }
+    if (!res.ok) { const e = new Error(res.status === 419 ? T.expired : (data.error || data.message || ('Error ' + res.status))); e.data = data; e.status = res.status; throw e; }
     return data;
   };
+  // a new session no longer owns the file uploaded before: upload it again, once
   const upload = async (from, to) => {
+    try { await uploadOnce(from, to); } catch (e) { if (e.status !== 403) throw e; uploaded = false; token = null; extracted = null; await uploadOnce(from, to); }
+  };
+  const uploadOnce = async (from, to) => {
     if (uploaded) return;
     const start = await post(C.urls.upload, { file_name: file.name, file_size: file.size });
     token = start.token;
@@ -401,7 +412,11 @@
       }
       stage(file ? 1 : 3, 10, '');
       const fields = Object.fromEntries(new FormData(form));
-      res = await post(C.urls.create, { ...fields, values, upload_token: token, keep_file: !file && $('keepFile') && $('keepFile').checked ? 1 : 0 });
+      const send = () => post(C.urls.create, { ...fields, values, upload_token: token, keep_file: !file && $('keepFile') && $('keepFile').checked ? 1 : 0 });
+      try { res = await send(); } catch (e) {
+        if (!(file && e.data && e.data.errors && e.data.errors.file)) throw e;
+        uploaded = false; token = null; await upload(0, 100); res = await send();
+      }
       store.clear();
     } catch (err) {
       showProc(false); btn.disabled = false;

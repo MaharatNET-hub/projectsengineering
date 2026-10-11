@@ -161,6 +161,8 @@ class StudiesTest extends TestCase
         $this->get('/v2/studies/lv_switchgear?lang=en')->assertOk()->assertSee('Fill the table from the file')->assertSee('Anti-condensation heater');
         $this->get('/v2/studies/cable_sizing')->assertOk();
         $this->get('/v2/studies/nope')->assertNotFound();
+        // a page left open gets a fresh token to send with
+        $this->get('/v2/csrf')->assertOk()->assertHeader('Cache-Control', 'no-store, private')->assertJsonStructure(['token']);
 
         // a file that is not what its extension says is refused
         $bad = $this->postJson('/v2/studies/upload', ['file_name' => 'x.pdf', 'file_size' => 2000])->assertOk()->json('token');
