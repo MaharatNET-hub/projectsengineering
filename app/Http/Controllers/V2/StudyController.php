@@ -43,28 +43,19 @@ class StudyController extends Controller
         return view('v2.studies.index', ['types' => StudyTypes::all()]);
     }
 
-    public function form(Request $r, string $type)
+    /**
+     * A study type's page: contact details + the file, nothing else. The file goes to the engineer of the
+     * type's category and is checked against that category's criteria while the visitor watches the steps;
+     * the result reaches the client by email once the engineer has reviewed it.
+     */
+    public function form(string $type)
     {
         $def = $this->type($type);
-        $parent = null;
-        if ($r->filled('from')) {
-            $parent = Study::where('code', strtoupper((string) $r->query('from')))->where('type', $def['key'])->firstOrFail();
-            abort_unless($parent->canResubmit(), 404);
-        }
         $client = auth('client')->user();
-        // a new revision starts from the previous values; an account fills in its contact details
-        $prefill = $parent ? array_merge($parent->only(['client_name', 'client_company', 'client_email', 'client_phone', 'project_name', 'reference']), ['values' => $parent->values])
-            : ($client ? ['client_name' => $client->name, 'client_company' => $client->company, 'client_email' => $client->email, 'client_phone' => $client->phone] : null);
-        $flags = [];
-        foreach ($parent?->keptFindings() ?? [] as $f) {
-            if (! empty($f['field']) && ! empty($f['section'])) {
-                $flags[] = ['section' => $f['section'], 'field' => $f['field'], 'rows' => $f['rows'] ?? [], 'text' => $f['comment'][app()->getLocale()] ?? $f['comment']['en']];
-            }
-        }
 
-        return view('v2.studies.form', [
-            'def' => $def, 'chunk' => self::CHUNK, 'maxMb' => config('studies.max_upload_mb'), 'accept' => array_keys(Uploads::MAGIC),
-            'parent' => $parent, 'prefill' => $prefill, 'flags' => $flags, 'client' => $client,
+        return view('v2.studies.upload', [
+            'def' => $def, 'client' => $client, 'category' => Category::forStudyType($def['key']),
+            'chunk' => \App\Http\Controllers\V2\SubmitController::CHUNK, 'maxMb' => config('v2.max_upload_mb'),
         ]);
     }
 

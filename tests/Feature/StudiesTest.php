@@ -158,7 +158,7 @@ class StudiesTest extends TestCase
     public function test_public_flow_with_prefill_and_cross_check(): void
     {
         $this->get('/v2/studies')->assertOk()->assertSee('dir="rtl"', false)->assertSee('مراجعة لوحات الجهد المنخفض');
-        $this->get('/v2/studies/lv_switchgear?lang=en')->assertOk()->assertSee('Fill the table from the file')->assertSee('Anti-condensation heater');
+        $this->get('/v2/studies/lv_switchgear?lang=en')->assertOk()->assertSee('Send for review')->assertDontSee('Anti-condensation heater');
         $this->get('/v2/studies/cable_sizing')->assertOk();
         $this->get('/v2/studies/nope')->assertNotFound();
 
