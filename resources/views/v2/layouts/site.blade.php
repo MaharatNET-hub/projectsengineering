@@ -1,4 +1,6 @@
-@php use App\V2\Site; $c = Site::contact(); $nav = ['home' => 'v2.home', 'about' => 'v2.about', 'services' => 'v2.services', 'projects' => 'v2.projects', 'contact' => 'v2.contact']; @endphp
+@php use App\V2\Site; $c = Site::contact(); $nav = ['home' => 'v2.home', 'about' => 'v2.about', 'services' => 'v2.services', 'projects' => 'v2.projects', 'contact' => 'v2.contact'];
+  // the drawing behind each page's banner (the home page has its own slider)
+  $art = match (true) { request()->routeIs('v2.services', 'v2.track*') => 'mechanical', request()->routeIs('v2.about', 'v2.project*', 'v2.account*') => 'buildings', default => 'electrical' }; @endphp
 <!doctype html>
 <html lang="{{ app()->getLocale() }}" dir="{{ Site::ar() ? 'rtl' : 'ltr' }}">
 <head>
@@ -23,38 +25,42 @@
         <a href="{{ route($r) }}" class="{{ request()->routeIs($r) || ($k === 'projects' && request()->routeIs('v2.project')) ? 'on' : '' }}">{{ __("v2.nav.$k") }}</a>
       @endforeach
       <a href="{{ route('v2.track') }}" class="{{ request()->routeIs('v2.track*') ? 'on' : '' }}">{{ __('v2.nav.track') }}</a>
+      <a class="m-only" href="{{ auth('client')->check() ? route('v2.account') : route('v2.account.login') }}">{{ auth('client')->check() ? __('studies.account.menu') : __('studies.account.login') }}</a>
     </nav>
     <div class="tools">
-      <a class="lang" href="{{ auth('client')->check() ? route('v2.account') : route('v2.account.login') }}">{{ auth('client')->check() ? __('studies.account.menu') : __('studies.account.login') }}</a>
+      <a class="lang acct" href="{{ auth('client')->check() ? route('v2.account') : route('v2.account.login') }}">{{ auth('client')->check() ? __('studies.account.menu') : __('studies.account.login') }}</a>
       <a class="lang" href="{{ Site::switchUrl() }}" hreflang="{{ Site::ar() ? 'en' : 'ar' }}">{{ __('v2.lang_switch') }}</a>
       <a class="btn glow" href="{{ route('v2.studies') }}"><x-v2.icon name="clipboard"/>{{ __('v2.nav.submit_short') }}</a>
     </div>
   </div>
 </header>
 
-<main>@yield('content')</main>
+<main style="--art: url('{{ asset("lib/v2/banner/$art.svg") }}')">@yield('content')</main>
 
 <footer class="foot">
   <div class="wrap">
     <div class="cols">
-      <div>
+      <div class="brand">
         <a class="logo" href="{{ route('v2.home') }}"><span class="mark">{{ Site::initial() }}</span><span>{{ Site::name() }}</span></a>
-        <p style="margin-top:14px;max-width:42ch">{{ Site::t(Site::company(), 'tagline') }}</p>
+        <p>{{ Site::t(Site::company(), 'tagline') }}</p>
+        <a class="btn glow" href="{{ route('v2.studies') }}"><x-v2.icon name="clipboard"/>{{ __('v2.nav.submit_short') }}</a>
       </div>
       <div>
         <h4>{{ __('v2.footer.quick') }}</h4>
-        @foreach ($nav as $k => $r)<a href="{{ route($r) }}">{{ __("v2.nav.$k") }}</a>@endforeach
-        <a href="{{ route('v2.studies') }}">{{ __('studies.nav') }}</a>
-        <a href="{{ route('v2.track') }}">{{ __('v2.nav.track') }}</a>
+        <div class="links">
+          @foreach ($nav as $k => $r)<a href="{{ route($r) }}">{{ __("v2.nav.$k") }}</a>@endforeach
+          <a href="{{ route('v2.studies') }}">{{ __('studies.nav') }}</a>
+          <a href="{{ route('v2.track') }}">{{ __('v2.nav.track') }}</a>
+        </div>
       </div>
       <div>
         <h4>{{ __('v2.footer.reach') }}</h4>
-        @if (!empty($c['email']))<a href="mailto:{{ $c['email'] }}" dir="ltr">{{ $c['email'] }}</a>@endif
-        @if (!empty($c['phone']))<a href="tel:{{ preg_replace('/[^+\d]/', '', $c['phone']) }}" dir="ltr">{{ $c['phone'] }}</a>@endif
-        <span style="display:block;padding:4px 0">{{ Site::t($c, 'address') }}</span>
+        @if (!empty($c['email']))<a class="reach" href="mailto:{{ $c['email'] }}"><x-v2.icon name="mail"/><span dir="ltr">{{ $c['email'] }}</span></a>@endif
+        @if (!empty($c['phone']))<a class="reach" href="tel:{{ preg_replace('/[^+\d]/', '', $c['phone']) }}"><x-v2.icon name="phone"/><span dir="ltr">{{ $c['phone'] }}</span></a>@endif
+        @if (Site::t($c, 'address'))<span class="reach"><x-v2.icon name="pin"/><span>{{ Site::t($c, 'address') }}</span></span>@endif
       </div>
     </div>
-    <div class="bottom"><span>© {{ date('Y') }} {{ Site::name() }}. {{ __('v2.footer.rights') }}</span><a href="{{ route('v2.admin.dashboard') }}" style="display:inline;color:#64748b">{{ __('v2.nav.admin') }}</a></div>
+    <div class="bottom"><span>© {{ date('Y') }} {{ Site::name() }}. {{ __('v2.footer.rights') }}</span><a href="{{ route('v2.admin.dashboard') }}">{{ __('v2.nav.admin') }}</a></div>
   </div>
 </footer>
 <script>

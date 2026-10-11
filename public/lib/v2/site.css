@@ -192,14 +192,24 @@ textarea.inp { min-height: 120px; resize: vertical; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 10px 22px; margin: 0; }
 .kv dt { color: var(--mute); font-size: 14px; } .kv dd { margin: 0; font-weight: 600; }
 
-/* footer */
-.foot { background: #0b1220; color: #94a3b8; padding-block: 56px 26px; margin-top: 0; }
-.foot .cols { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; }
+/* footer — compact: brand, links in two columns, contact with icons */
+.foot { background: #0b1220; color: #94a3b8; padding-block: 44px 18px; position: relative; }
+.foot::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--glow); opacity: .8; }
+.foot .cols { display: grid; grid-template-columns: 1.3fr 1.2fr 1fr; gap: 28px 48px; align-items: start; }
 .foot .logo { color: #fff; }
-.foot h4 { color: #fff; font-size: 15px; margin-bottom: 14px; }
-.foot a { color: #cbd5e1; display: block; padding: 4px 0; font-size: 15px; }
-.foot .bottom { border-top: 1px solid #1e293b; margin-top: 40px; padding-top: 20px; font-size: 14px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-@media (max-width: 760px) { .foot .cols { grid-template-columns: 1fr; } }
+.foot .brand p { margin: 12px 0 16px; max-width: 40ch; font-size: 14.5px; line-height: 1.7; }
+.foot .brand .btn { padding: 9px 16px; font-size: 14px; }
+.foot h4 { color: #fff; font-size: 15px; margin: 6px 0 12px; }
+.foot a { color: #cbd5e1; font-size: 14.5px; }
+.foot a:hover { color: #fff; }
+.foot .links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
+.foot .links a { padding: 2px 0; }
+.foot .reach { display: flex; align-items: flex-start; gap: 10px; padding: 3px 0; margin-bottom: 6px; font-size: 14.5px; color: #cbd5e1; }
+.foot .reach .i { width: 17px; height: 17px; margin-top: 4px; color: var(--accent); }
+.foot .bottom { border-top: 1px solid #1e293b; margin-top: 30px; padding-top: 16px; font-size: 13.5px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.foot .bottom a { color: #64748b; font-size: 13.5px; }
+@media (max-width: 900px) { .foot .cols { grid-template-columns: 1fr 1fr; } .foot .brand { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .foot { padding-top: 36px; } .foot .cols { grid-template-columns: 1fr; gap: 24px; } .foot .bottom { margin-top: 24px; } }
 .cta-band { background: linear-gradient(120deg, var(--brand), var(--brand2)); color: #fff; border-radius: 20px; padding: clamp(28px, 5vw, 48px); display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
 .cta-band h2 { color: #fff; margin: 0 0 6px; } .cta-band p { color: #d6e0f7; margin: 0; }
 
@@ -263,3 +273,26 @@ html[dir="rtl"] .tcard::before { transform-origin: right; }
 .logo .mark { background: var(--glow); color: #04122b; }
 .logo .mark::after { background: #fff; opacity: .5; }
 .stats b { background: var(--glow); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* the closing call-to-action sits close to the footer */
+section.block:has(> .wrap > .cta-band) { padding-bottom: clamp(40px, 5vw, 64px); }
+
+/* ---------- page banners: each inner page gets a drawing (set as --art on <main>) behind its title ---------- */
+.page-head { min-height: clamp(220px, 30vw, 320px); display: flex; align-items: center; }
+.page-head .wrap { width: 100%; padding-block: 56px 50px; }
+.page-head::after { content: ""; position: absolute; inset: 0; background: var(--art) center 40% / cover no-repeat; opacity: .9;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 42%, #000 78%); mask-image: linear-gradient(90deg, transparent 0%, transparent 42%, #000 78%); }
+html[dir="rtl"] .page-head::after { transform: scaleX(-1); }
+.page-head h1 { font-size: clamp(32px, 4.4vw, 50px); margin-bottom: 10px; }
+.page-head h1::after { content: ""; display: block; width: 64px; height: 4px; border-radius: 4px; background: var(--glow); margin-top: 16px; }
+.page-head p { font-size: 17.5px; margin: 0; max-width: 56ch; }
+.page-head .wrap > * { animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
+.page-head .wrap > :nth-child(2) { animation-delay: .1s; } .page-head .wrap > :nth-child(3) { animation-delay: .2s; }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+@media (max-width: 700px) { .page-head::after { opacity: .35; -webkit-mask-image: none; mask-image: none; } }
+@media (prefers-reduced-motion: reduce) { .page-head .wrap > * { animation: none; } }
+
+/* header on phones: the account link moves into the menu so the company name has room */
+.nav .m-only { display: none; }
+@media (max-width: 1080px) { .nav .m-only { display: block; } }
+@media (max-width: 560px) { .top .tools .acct { display: none; } .top .wrap { gap: 12px; } .logo span { max-width: none; font-size: 15.5px; } }
