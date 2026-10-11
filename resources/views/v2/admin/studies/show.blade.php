@@ -21,6 +21,23 @@
         @include('v2.studies._diff', ['diff' => $diff])
       </div>
     @endif
+    {{-- the study's file checked against its category's criteria: the marked-up drawings the engineer reviews --}}
+    @if ($s->isPdf())
+      @php $rv = $check?->review(); @endphp
+      <div class="card pad" style="border-inline-start:4px solid var(--accent)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <h2 style="margin:0">{{ __('File check against the category criteria') }}</h2>
+          @if ($rv)<span class="chip {{ ! empty($rv['final']) ? 'ok' : 'warn' }}"><span class="dot"></span>{{ ! empty($rv['final']) ? __('Approved & generated') : __('Draft — waiting for your review') }}</span>@endif
+        </div>
+        @if (! $category)
+          <p class="mute" style="margin:8px 0 0">{{ __('No category takes this study type, so its file is not checked against criteria.') }} @if (auth()->user()->isAdmin())<a href="{{ route('v2.admin.categories') }}">{{ __('Link it to a category') }}</a>@endif</p>
+        @else
+          <p class="mute" style="margin:8px 0 12px">{{ $category->t('name') }} · {{ $category->spec_title ?: __('no specification title') }}@if ($rv) · {{ count($rv['comments'] ?? []) }} {{ __('comments') }} · {{ $rv['stats']['markedPages'] ?? 0 }} {{ __('marked pages') }}@endif</p>
+          <form method="post" action="{{ route('v2.admin.studies.check', $s) }}">@csrf<button class="btn primary"><x-v2.icon name="eye"/>{{ $rv ? __('Open the marked-up drawings') : __('Run the check') }}</button></form>
+          <p class="mute" style="font-size:12.5px;margin:10px 0 0">{{ __('Review the comments on the drawings, add yours, then press "Approve & generate" there: the marked-up PDF is attached to the email that issues this study.') }}</p>
+        @endif
+      </div>
+    @endif
     @unless ($canEdit)<div class="alert bad" style="margin:0">{{ __('Assigned to') }} {{ $s->assignee?->name }} {{ __('— only they or an admin can edit this review.') }}</div>@endunless
     <form class="card pad form" method="post" action="{{ route('v2.admin.studies.update', $s) }}">
       @csrf @method('patch')
@@ -101,12 +118,11 @@
       @if ($s->notes)<h3 style="margin-top:14px">{{ __('Notes from the client') }}</h3><p style="white-space:pre-line;margin:0">{{ $s->notes }}</p>@endif
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <form method="post" action="{{ route('v2.admin.studies.reanalyse', $s) }}">@csrf<button class="btn"><x-v2.icon name="chart"/>{{ __('Run the rules again') }}</button></form>
-        @if ($s->isPdf())<form method="post" action="{{ route('v2.admin.studies.check', $s) }}">@csrf<button class="btn primary"><x-v2.icon name="check"/>{{ __('Check the file against the category criteria') }}</button></form>@endif
       </div>
     </div>
     <div class="card pad">
       <h2>{{ __('Engineer') }}</h2>
-      <p style="margin:0 0 10px">{!! $s->assignee ? '<b>' . e($s->assignee->name) . '</b>' : '<span class="mute">Not assigned</span>' !!}</p>
+      <p style="margin:0 0 10px">{!! $s->assignee ? '<b>' . e($s->assignee->name) . '</b>' : '<span class="mute">' . e(__('Not assigned')) . '</span>' !!}</p>
       @if (auth()->user()->isAdmin())
         <form method="post" action="{{ route('v2.admin.studies.assign', $s) }}" style="display:flex;gap:8px">@csrf
           <select class="inp" name="user"><option value="">{{ __('— nobody —') }}</option>@foreach ($engineers as $e)<option value="{{ $e->id }}" @selected($s->assigned_to === $e->id)>{{ $e->name }} ({{ $e->role }})</option>@endforeach</select>
@@ -142,14 +158,17 @@
         @empty<li class="mute">{{ __('No activity yet.') }}</li>@endforelse
       </ul>
     </div>
-    <div class="card pad">
+    <div class="card pad" id="send">
       <h2>{{ __('Send to the client') }}</h2>
+      @if ($s->isIssued() && $check && empty($check->review()['final']))
+        <div class="alert bad" style="margin:0 0 12px">{{ __('The marked-up drawings are not approved yet: open the file check and press "Approve & generate", otherwise only the report is sent.') }}</div>
+      @endif
       @if ($s->isIssued())
         <form class="form" method="post" action="{{ route('v2.admin.studies.email', $s) }}">
           @csrf
           <label class="f">{{ __('To') }}<input class="inp" type="email" name="to" value="{{ $s->client_email }}"></label>
           <label class="f">{{ __('Message') }} <small>{{ __('(optional)') }}</small><textarea class="inp" name="note"></textarea></label>
-          <div><button class="btn primary"><x-v2.icon name="send"/>{{ __('Email the review') }}</button> @if ($s->emailed_at)<span class="mute" style="font-size:12.5px">{{ __('Last sent') }} {{ $s->emailed_at->diffForHumans() }}.</span>@endif</div>
+          <div><button class="btn primary"><x-v2.icon name="send"/>{{ $check && ! empty($check->review()['final']) ? __('Email the report + marked-up PDF') : __('Email the review') }}</button> @if ($s->emailed_at)<span class="mute" style="font-size:12.5px">{{ __('Last sent') }} {{ $s->emailed_at->diffForHumans() }}.</span>@endif</div>
         </form>
       @else
         <p class="mute" style="margin:0">{{ __('Available once the review is issued (choose the action and press') }} <b>{{ __('Save & issue') }}</b>).</p>

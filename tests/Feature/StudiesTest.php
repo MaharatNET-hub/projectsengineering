@@ -158,7 +158,7 @@ class StudiesTest extends TestCase
     public function test_public_flow_with_prefill_and_cross_check(): void
     {
         $this->get('/v2/studies')->assertOk()->assertSee('dir="rtl"', false)->assertSee('مراجعة لوحات الجهد المنخفض');
-        $this->get('/v2/studies/lv_switchgear?lang=en')->assertOk()->assertSee('Send for review')->assertDontSee('Anti-condensation heater');
+        $this->get('/v2/studies/lv_switchgear?lang=en')->assertOk()->assertSee('Fill the table from the file')->assertSee('Anti-condensation heater');
         $this->get('/v2/studies/cable_sizing')->assertOk();
         $this->get('/v2/studies/nope')->assertNotFound();
 
@@ -216,7 +216,8 @@ class StudiesTest extends TestCase
         Mail::assertSent(StudyReceived::class, fn ($m) => $m->hasTo('sara@example.com'));
         Mail::assertSent(StudyNew::class);
 
-        // the client's page: preliminary findings, in Arabic
+        // the client's page: preliminary findings, in Arabic (when the office chooses to show them)
+        config(['studies.show_preliminary' => true]);
         $this->get($res->json('url'))->assertOk()->assertSee($s->code)->assertSee('الفحص الآلي (مبدئي)')->assertSee('يُعدّل ويُعاد تقديمه')->assertSee('مقطع أسلاك التحكم');
         // report: generated pages + the 6 pages of the supporting file
         $pdf = $this->get("/v2/studies/r/{$s->code}/report")->assertOk();

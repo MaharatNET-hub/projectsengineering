@@ -40,6 +40,7 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
     Route::post('studies/upload/{token}/chunk', [StudyController::class, 'uploadChunk'])->name('studies.chunk');
     Route::post('studies/upload/{token}/extract', [StudyController::class, 'uploadExtract'])->name('studies.extract');
     Route::get('studies/r/{code}', [StudyController::class, 'show'])->middleware('throttle:v2-track')->name('studies.show');
+    Route::post('studies/r/{code}/step', [StudyController::class, 'step'])->name('studies.step');
     Route::get('studies/r/{code}/report', [StudyController::class, 'report'])->middleware('throttle:v2-track')->name('studies.report');
     Route::get('studies/{type}/template/{section}', [StudyController::class, 'template'])->name('studies.template');
     Route::post('studies/{type}/import/{section}', [StudyController::class, 'import'])->middleware('throttle:v2-study')->name('studies.import');

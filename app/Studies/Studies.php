@@ -2,7 +2,12 @@
 
 namespace App\Studies;
 
+use App\Models\V2\Activity;
+use App\Models\V2\Category;
 use App\Models\V2\Study;
+use App\Models\V2\Submission;
+use App\V2\Submissions;
+use Illuminate\Support\Facades\File;
 
 /** Analysis and report for one study. */
 final class Studies
@@ -62,5 +67,62 @@ final class Studies
 
             return null;
         }
+    }
+
+    /**
+     * The study's PDF in the check of its category: a linked submission (same engineer) holds the file, the
+     * category's criteria and, once read, the marked-up draft the engineer reviews. Made once; null when the
+     * file is not a PDF or no category takes this study type.
+     */
+    public static function linkCheck(Study $s, ?int $engineer = null): ?Submission
+    {
+        if ($sub = Submission::where('study_id', $s->id)->first()) {
+            return $sub;
+        }
+        $category = Category::forStudyType($s->type);
+        if (! $category || ! $s->isPdf()) {
+            return null;
+        }
+        $sub = Submission::create([
+            'study_id' => $s->id, 'status' => 'received', 'category_id' => $category->id,
+            'assigned_to' => $s->assigned_to ?? $engineer, 'engineer' => $s->engineer,
+            'client_name' => $s->client_name, 'client_company' => $s->client_company, 'client_email' => $s->client_email,
+            'client_phone' => $s->client_phone, 'project_name' => $s->project_name, 'submittal_no' => $s->reference,
+            'discipline' => $category->discipline ?? 'Other', 'title' => $s->typeName('en'), 'locale' => $s->locale,
+            'file_name' => $s->file_name ?: 'study.pdf',
+        ]);
+        File::ensureDirectoryExists($sub->dir());
+        File::copy($s->filePath(), $sub->originalPath());
+        $sub->update(['file_size' => filesize($sub->originalPath()), 'page_count' => $s->page_count]);
+        Submissions::prepare($sub, true);
+        Activity::log($sub, 'submission.received', "from study {$s->code} · {$category->name_en}");
+        Activity::forStudy($s, 'study.checked', "file sent to the {$category->name_en} check ({$sub->code})");
+
+        return $sub;
+    }
+
+    /**
+     * Drive the category check of a study's file one batch at a time. $review false only reads pages; the
+     * final call drafts the marked-up review, then the study's own rules run again with what the file says.
+     */
+    public static function checkStep(Study $s, bool $review): array
+    {
+        $sub = Submission::where('study_id', $s->id)->first();
+        if (! $sub || ! $sub->hasOriginal()) {
+            return ['done' => true];
+        }
+        if ($sub->status === 'received' || ($sub->status === 'analysing' && ! is_file($sub->dir() . '/job.json'))) {
+            Submissions::start($sub);
+        }
+        $r = Submissions::step($sub->fresh(), (float) config('demo.step_seconds', 12), $review);
+        if ($review && $r['done'] && empty($r['busy'])) {
+            if (is_file($sub->dir() . '/extracted.json')) {
+                File::copy($sub->dir() . '/extracted.json', $s->dir() . '/extracted.json');
+            }
+            self::analyse($s);
+            self::report($s);
+        }
+
+        return $r;
     }
 }

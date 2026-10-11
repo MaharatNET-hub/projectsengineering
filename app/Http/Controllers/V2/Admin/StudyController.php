@@ -50,6 +50,7 @@ class StudyController extends Controller
             's' => $study, 'def' => $study->def(), 'engineers' => User::where('active', true)->orderBy('name')->get(),
             'activity' => $study->activities()->with('user')->get(), 'canEdit' => $this->canEdit($study),
             'history' => $study->history(), 'diff' => $study->parent ? \App\Studies\Revisions::diff($study->parent, $study) : null,
+            'check' => Submission::where('study_id', $study->id)->first(), 'category' => Category::forStudyType($study->type),
         ]);
     }
 
@@ -168,25 +169,13 @@ class StudyController extends Controller
         if (! $study->isPdf()) {
             return back()->with('bad', __('The study has no PDF file to check.'));
         }
-        $sub = Submission::where('study_id', $study->id)->first();
-        if ($sub && $sub->hasOriginal()) {
+        $sub = Studies::linkCheck($study, auth()->id());
+        if (! $sub) {
+            return back()->with('bad', __('No category takes this study type: link it under Categories first.'));
+        }
+        if ($sub->review()) {
             return redirect()->route('v2.admin.submissions.workspace', $sub);
         }
-        $category = Category::forStudyType($study->type);
-        $sub ??= Submission::create([
-            'study_id' => $study->id, 'status' => 'received', 'category_id' => $category?->id,
-            'assigned_to' => $study->assigned_to ?? auth()->id(), 'engineer' => $study->engineer,
-            'client_name' => $study->client_name, 'client_company' => $study->client_company, 'client_email' => $study->client_email,
-            'client_phone' => $study->client_phone, 'project_name' => $study->project_name, 'submittal_no' => $study->reference,
-            'discipline' => $category?->discipline ?? 'Other', 'title' => $study->typeName('en'), 'locale' => $study->locale,
-            'file_name' => $study->file_name ?: 'study.pdf',
-        ]);
-        File::ensureDirectoryExists($sub->dir());
-        File::copy($study->filePath(), $sub->originalPath());
-        $sub->update(['file_size' => filesize($sub->originalPath()), 'page_count' => $study->page_count]);
-        Submissions::prepare($sub, true);
-        Activity::log($sub, 'submission.received', "from study {$study->code}" . ($category ? " · {$category->name_en}" : ''));
-        Activity::forStudy($study, 'study.checked', "file sent to the category check ({$sub->code})");
 
         return redirect()->route('v2.admin.submissions.workspace', [$sub, 'start' => 1]);
     }

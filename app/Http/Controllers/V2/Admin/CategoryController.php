@@ -22,7 +22,13 @@ class CategoryController extends Controller
     {
         $open = Submission::whereIn('status', ['received', 'analysing', 'review'])->whereNotNull('category_id')->selectRaw('category_id, count(*) as n')->groupBy('category_id')->pluck('n', 'category_id');
 
-        return view('v2.admin.categories.index', ['categories' => Category::with('engineers')->withCount('submissions')->orderBy('sort')->orderBy('id')->get(), 'open' => $open]);
+        $categories = Category::with('engineers')->withCount('submissions')->orderBy('sort')->orderBy('id')->get();
+        $types = StudyTypes::all();
+        // study types no active category takes: their files reach no engineer and no criteria
+        $linked = $categories->where('active', true)->flatMap(fn ($c) => $c->study_types ?? [])->all();
+        $unlinked = array_map(fn ($d) => StudyTypes::t($d['name']), array_diff_key($types, array_flip($linked)));
+
+        return view('v2.admin.categories.index', ['categories' => $categories, 'open' => $open, 'types' => $types, 'unlinked' => array_values($unlinked)]);
     }
 
     public function create()

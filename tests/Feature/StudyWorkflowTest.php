@@ -123,9 +123,13 @@ class StudyWorkflowTest extends TestCase
     {
         $rev0 = $this->cableStudy();
         $this->assertSame(['CB2'], array_column($rev0->analysis['findings'], 'rule'));
+        $this->get("/v2/studies/lv_switchgear?from={$rev0->code}")->assertNotFound(); // wrong type
+        $this->get("/v2/studies/cable_sizing?from={$rev0->code}")->assertNotFound(); // not issued yet
 
         $this->issue($rev0, 'revise');
-        $this->get("/v2/studies/r/{$rev0->code}")->assertOk()->assertSee('تقديم دراسة معدّلة (Rev 1)');
+        $this->get("/v2/studies/r/{$rev0->code}")->assertOk()->assertSee('تقديم دراسة معدّلة (Rev 1)')->assertSee("from={$rev0->code}", false);
+        $form = $this->get("/v2/studies/cable_sizing?from={$rev0->code}")->assertOk()->assertSee('المراجعة Rev 1 للدراسة')->assertSee('schedule.xlsx');
+        $this->assertStringContainsString('"field":"iz_a"', $form->getContent()); // the commented field is flagged in the form
 
         // Rev 1: C1 now 70 mm², a new circuit C3, the same file kept
         $rev1 = $this->cableStudy([self::circuit(['size_mm2' => '70', 'breaker_a' => '200']), self::circuit(['tag' => 'C2', 'size_mm2' => '120']), self::circuit(['tag' => 'C3', 'size_mm2' => '16', 'breaker_a' => '100'])],
@@ -198,7 +202,7 @@ class StudyWorkflowTest extends TestCase
         $this->assertSame($client->id, $before->fresh()->client_id);
         $this->get('/v2/account')->assertOk()->assertSee($before->code)->assertSee('دراساتي');
         // the form is filled with the account's details and a new study is linked
-        $this->get('/v2/studies/cable_sizing')->assertOk()->assertSee('value="Sara Haddad"', false);
+        $this->get('/v2/studies/cable_sizing')->assertOk()->assertSee('"client_name":"Sara Haddad"', false);
         $after = $this->cableStudy();
         $this->assertSame($client->id, $after->client_id);
 
@@ -241,7 +245,7 @@ class StudyWorkflowTest extends TestCase
         $this->post('/v2/admin/study-types', ['key' => 'lighting_study', 'name_en' => 'X', 'name_ar' => 'س', 'discipline' => 'Other'])->assertSessionHas('bad');
         $this->assertTrue(StudyTypes::isCustom('lighting_study'));
         $this->get('/v2/studies')->assertSee('دراسة الإنارة');
-        $this->get('/v2/studies/lighting_study')->assertOk()->assertSee('دراسة الإنارة');
+        $this->get('/v2/studies/lighting_study')->assertOk()->assertSee('القيمة المرجعية');
 
         // add a rule with the editor's JSON, then use it
         $def = StudyTypes::find('lighting_study');

@@ -13,8 +13,9 @@ window.APP = {
   base: @json(url('v2/admin/submissions/' . $s->id)),
   chunk: 1048576,
   csrf: @json(csrf_token()),
-  back: @json(route('v2.admin.submissions.show', $s)),
-  code: @json($s->code),
+  // a study's file check goes back to the study, which issues the report and this PDF in one email
+  back: @json($s->study_id ? route('v2.admin.studies.show', $s->study_id) : route('v2.admin.submissions.show', $s)),
+  code: @json($s->study_id ? (\App\Models\V2\Study::find($s->study_id)?->code ?? $s->code) : $s->code),
   category: @json($s->category?->name_en),
   engineer: @json(($s->assignee ?? auth()->user())->name),
   spec: @json($s->category?->specPath() ? route('v2.admin.categories.spec', $s->category) : null),

@@ -174,31 +174,50 @@ class CategoriesTest extends TestCase
         $this->assertSame($this->omar->id, $second->fresh()->assigned_to);
     }
 
-    public function test_a_study_page_takes_only_the_file_and_hides_the_result(): void
+    public function test_a_study_is_checked_against_its_category_while_the_client_waits(): void
     {
         $this->lv->engineers()->sync([$this->omar->id]);
-        $this->get('/v2/studies/lv_switchgear?lang=en')->assertOk()->assertSee('Send for review')->assertSee($this->lv->spec_title);
+        // the full form of the type, with the file
+        $this->get('/v2/studies/lv_switchgear?lang=en')->assertOk()->assertSee('Anti-condensation heater')->assertSee($this->lv->spec_title);
         $pdf = ReviewPipelineTest::submittal();
-        $code = $this->postJson('/v2/submit', [
-            'study_type' => 'lv_switchgear', 'client_name' => 'Sara Haddad', 'client_email' => 'sara@example.com',
-            'project_name' => 'Tower A', 'file_name' => 'sub.pdf', 'file_size' => strlen($pdf),
-        ])->assertOk()->json('code');
-        $s = Submission::where('code', $code)->firstOrFail();
-        // the study type decides the category, hence the engineer and the criteria
-        $this->assertTrue($s->category->is($this->lv));
-        $this->assertTrue($s->assignee->is($this->omar));
-        $this->assertContains($s->title, \App\Studies\StudyTypes::find('lv_switchgear')['name']);
-        $this->call('POST', "/v2/submit/$code/chunk?index=0&total=1", [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], $pdf)->assertOk();
-        // reading the pages does not draft the review yet; the last call does
-        for ($i = 0; $i < 50 && ! $this->postJson("/v2/submit/$code/step", ['phase' => 'read'])->json('done'); $i++) {
+        $token = $this->postJson('/v2/studies/upload', ['file_name' => 'panels.pdf', 'file_size' => strlen($pdf)])->json('token');
+        $this->call('POST', "/v2/studies/upload/$token/chunk?index=0&total=1", [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], $pdf)->assertOk();
+        $res = $this->postJson('/v2/studies/cable_sizing', ['client_name' => 'Sara', 'client_email' => 'sara@example.com', 'project_name' => 'Tower A', 'upload_token' => $token,
+            'values' => ['project' => ['v3' => 400, 'v1' => 230, 'vd_lighting' => 3, 'vd_power' => 5], 'circuits' => [['tag' => 'C1', 'use' => 'power', 'phases' => '3', 'load_kw' => '10', 'pf' => '0.9', 'length_m' => '20', 'material' => 'Cu', 'size_mm2' => '10', 'runs' => '1', 'derating' => '1', 'breaker_a' => '25']]]])
+            ->assertOk()->assertJson(['check' => true]);
+        $study = \App\Models\V2\Study::where('code', $res->json('code'))->firstOrFail();
+        // the file is in the check of the type's category, with its engineer
+        $sub = Submission::where('study_id', $study->id)->firstOrFail();
+        $this->assertSame($this->lv->id, $sub->category_id);
+        $this->assertSame($this->omar->id, $sub->assigned_to);
+        $this->assertSame($this->omar->id, $study->assigned_to);
+
+        // the browser reads the pages, then the last call drafts the marked-up review
+        $step = "/v2/studies/r/{$study->code}/step";
+        for ($i = 0; $i < 50 && ! $this->postJson($step, ['phase' => 'read'])->assertOk()->json('done'); $i++) {
         }
-        $this->assertFileDoesNotExist($s->dir() . '/review.json');
-        $this->postJson("/v2/submit/$code/step", ['phase' => 'review'])->assertOk();
-        $this->assertFileExists($s->dir() . '/review.json');
-        $this->assertSame('review', $s->fresh()->status);
-        // nothing of the analysis reaches the client before the engineer issues it
-        $this->get("/v2/track/$code")->assertOk()->assertDontSee('IP43');
-        $this->get("/v2/track/$code/download")->assertNotFound();
+        $this->assertNull($sub->review());
+        $this->postJson($step, ['phase' => 'review'])->assertOk();
+        $this->assertNotNull($sub->review());
+        $this->assertNotEmpty($sub->review()['comments']);
+        $this->assertFileExists($study->dir() . '/extracted.json'); // the study's own rules saw the file too
+        // only the visitor who sent it drives it
+        $this->flushSession();
+        $this->postJson($step, ['phase' => 'read'])->assertForbidden();
+
+        // the client sees the status, not the findings
+        $this->get("/v2/studies/r/{$study->code}")->assertOk()->assertSee('يقوم مهندسنا بمراجعة دراستك')->assertDontSee('IP43');
+
+        // the engineer approves the marked-up file and issues the study: one email carries both PDFs
+        $this->actingAs($this->omar, 'web');
+        $this->get("/v2/admin/studies/{$study->id}")->assertOk()->assertSee(route('v2.admin.studies.check', $study), false);
+        \App\Review\Store::using($sub->dir(), function () use ($sub) {
+            \App\Review\Store::write('overrides.json', ['comments' => $sub->review()['comments'], 'decision' => 'Revise / Resubmit', 'engineer' => 'Omar', 'final' => true]);
+            \App\Review\Reviewer::run();
+        });
+        $study->update(['status' => 'issued', 'decision' => 'revise', 'issued_at' => now()]);
+        $this->post("/v2/admin/studies/{$study->id}/email")->assertSessionHasNoErrors();
+        Mail::assertSent(\App\Mail\V2\StudyIssued::class, fn ($m) => $m->hasTo('sara@example.com') && $m->markup && count($m->attachments()) === 2);
     }
 
     public function test_form_studies_follow_their_category(): void
@@ -236,8 +255,8 @@ class CategoriesTest extends TestCase
         $this->assertFileExists($sub->dir() . '/rules.json');
         $this->get(route('v2.admin.submissions.workspace', $sub))->assertOk();
 
-        // a second click opens the same check
-        $this->post("/v2/admin/studies/{$study->id}/check")->assertRedirect(route('v2.admin.submissions.workspace', $sub));
+        // a second click opens the same check (and runs it while it has not run yet)
+        $this->post("/v2/admin/studies/{$study->id}/check")->assertRedirect(route('v2.admin.submissions.workspace', [$sub, 'start' => 1]));
         $this->assertSame(1, Submission::where('study_id', $study->id)->count());
     }
 }
