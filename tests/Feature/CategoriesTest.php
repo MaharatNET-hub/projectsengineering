@@ -174,6 +174,33 @@ class CategoriesTest extends TestCase
         $this->assertSame($this->omar->id, $second->fresh()->assigned_to);
     }
 
+    public function test_a_study_page_takes_only_the_file_and_hides_the_result(): void
+    {
+        $this->lv->engineers()->sync([$this->omar->id]);
+        $this->get('/v2/studies/lv_switchgear?lang=en')->assertOk()->assertSee('Send for review')->assertSee($this->lv->spec_title);
+        $pdf = ReviewPipelineTest::submittal();
+        $code = $this->postJson('/v2/submit', [
+            'study_type' => 'lv_switchgear', 'client_name' => 'Sara Haddad', 'client_email' => 'sara@example.com',
+            'project_name' => 'Tower A', 'file_name' => 'sub.pdf', 'file_size' => strlen($pdf),
+        ])->assertOk()->json('code');
+        $s = Submission::where('code', $code)->firstOrFail();
+        // the study type decides the category, hence the engineer and the criteria
+        $this->assertTrue($s->category->is($this->lv));
+        $this->assertTrue($s->assignee->is($this->omar));
+        $this->assertContains($s->title, \App\Studies\StudyTypes::find('lv_switchgear')['name']);
+        $this->call('POST', "/v2/submit/$code/chunk?index=0&total=1", [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], $pdf)->assertOk();
+        // reading the pages does not draft the review yet; the last call does
+        for ($i = 0; $i < 50 && ! $this->postJson("/v2/submit/$code/step", ['phase' => 'read'])->json('done'); $i++) {
+        }
+        $this->assertFileDoesNotExist($s->dir() . '/review.json');
+        $this->postJson("/v2/submit/$code/step", ['phase' => 'review'])->assertOk();
+        $this->assertFileExists($s->dir() . '/review.json');
+        $this->assertSame('review', $s->fresh()->status);
+        // nothing of the analysis reaches the client before the engineer issues it
+        $this->get("/v2/track/$code")->assertOk()->assertDontSee('IP43');
+        $this->get("/v2/track/$code/download")->assertNotFound();
+    }
+
     public function test_form_studies_follow_their_category(): void
     {
         $this->lv->engineers()->sync([$this->sami->id]);

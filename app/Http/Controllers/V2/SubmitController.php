@@ -35,12 +35,18 @@ class SubmitController extends Controller
         if ($r->filled('website')) {
             return response()->json(['error' => 'Rejected'], 422);
         }
+        // sent from a study type's page: the type decides the category (engineer + criteria) and the title
+        $type = $r->filled('study_type') ? \App\Studies\StudyTypes::find((string) $r->input('study_type')) : null;
+        if ($type) {
+            $cat = Category::forStudyType($type['key']);
+            $r->merge(['category_id' => $cat?->id, 'title' => $r->input('title') ?: \App\Studies\StudyTypes::t($type['name'])]);
+        }
         $data = $r->validate([
             'client_name' => 'required|string|max:120', 'client_company' => 'nullable|string|max:160', 'client_email' => 'required|email|max:160',
             'client_phone' => 'nullable|string|max:40', 'project_name' => 'required|string|max:200', 'submittal_no' => 'nullable|string|max:80',
             'discipline' => 'nullable|in:Electrical,Mechanical,Plumbing,Fire,Other', 'title' => 'nullable|string|max:255', 'notes' => 'nullable|string|max:3000',
             // the category decides the engineer and the criteria; required as soon as categories exist
-            'category_id' => [Category::where('active', true)->exists() ? 'required' : 'nullable', 'integer', \Illuminate\Validation\Rule::exists('v2_categories', 'id')->where('active', true)],
+            'category_id' => [! $type && Category::where('active', true)->exists() ? 'required' : 'nullable', 'integer', \Illuminate\Validation\Rule::exists('v2_categories', 'id')->where('active', true)],
             'file_name' => 'required|string|max:255', 'file_size' => 'required|integer|min:100',
         ]);
         if ($data['file_size'] > config('v2.max_upload_mb') * 1048576) {
@@ -140,7 +146,7 @@ class SubmitController extends Controller
                 return response()->json(['done' => true, 'page' => $s->page_count, 'total' => $s->page_count]);
             }
 
-            return response()->json(Submissions::step($s->fresh(), (float) config('demo.step_seconds', 12)));
+            return response()->json(Submissions::step($s->fresh(), (float) config('demo.step_seconds', 12), $r->input('phase') !== 'read'));
         } catch (\Throwable $e) {
             report($e);
 

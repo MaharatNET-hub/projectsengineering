@@ -82,11 +82,14 @@ final class Submissions
         return $job;
     }
 
-    /** Read the next batch of pages; when all are read, run the rules and build the draft. */
-    public static function step(Submission $s, float $budget): array
+    /**
+     * Read the next batch of pages; when all are read, run the rules and build the draft. With $review false
+     * it only reads, so the browser can show "checking" and "marking up" as their own steps.
+     */
+    public static function step(Submission $s, float $budget, bool $review = true): array
     {
         $r = Store::using($s->dir(), fn () => Extractor::step($budget));
-        if ($r['done'] && empty($r['busy']) && ! is_file($s->dir() . '/review.json')) {
+        if ($review && $r['done'] && empty($r['busy']) && ! is_file($s->dir() . '/review.json')) {
             self::review($s);
         }
 
