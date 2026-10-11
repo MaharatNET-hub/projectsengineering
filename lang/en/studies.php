@@ -59,6 +59,7 @@ return [
     'decision' => ['approved' => 'Approved', 'noted' => 'Approved as noted', 'revise' => 'Revise and resubmit', 'rejected' => 'Rejected'],
     'finding' => ['fail' => 'Non-compliant', 'warn' => 'Clarify', 'missing' => 'Missing data', 'mismatch' => 'Form ≠ file', 'pass' => 'Complies', 'na' => 'Not applicable'],
     'err' => [
+        'expired' => 'This page expired. Reload it and send again — what you entered is saved on this device.',
         'required' => 'Required.', 'number' => 'Enter a number.', 'min' => 'Must be at least :min.', 'max' => 'Must be at most :max.', 'choose' => 'Choose one of the options.',
         'long' => 'Too long (max :max characters).', 'rows_min' => 'Add at least :n row(s).', 'rows_max' => 'At most :n rows.', 'duplicate' => 'Used twice — each row needs its own name.',
         'file' => 'Attach the supporting file.', 'file_type' => 'This file type is not accepted.', 'file_size' => 'The file is larger than :mb MB.',

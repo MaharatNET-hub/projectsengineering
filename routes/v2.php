@@ -34,6 +34,8 @@ Route::prefix('v2')->name('v2.')->middleware([EnsureInstalled::class, SetLocale:
     Route::post('submit/{code}/step', [SubmitController::class, 'step'])->name('submit.step');
     Route::get('submit/{code}/thanks', [SubmitController::class, 'thanks'])->name('submit.thanks');
 
+    // a fresh CSRF token for a page left open (the study form renews it and sends again)
+    Route::get('csrf', fn () => response()->json(['token' => csrf_token()])->header('Cache-Control', 'no-store'))->middleware('throttle:60,1')->name('csrf');
     // study review requests: a form per study type + a supporting file
     Route::get('studies', [StudyController::class, 'index'])->name('studies');
     Route::post('studies/upload', [StudyController::class, 'uploadStart'])->middleware('throttle:v2-study')->name('studies.upload');
