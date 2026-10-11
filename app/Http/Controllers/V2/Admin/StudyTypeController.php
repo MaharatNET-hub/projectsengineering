@@ -14,7 +14,7 @@ class StudyTypeController extends Controller
     {
         $counts = Study::selectRaw('type, count(*) as n')->groupBy('type')->pluck('n', 'type');
 
-        return view('v2.admin.study-types.index', ['types' => StudyTypes::all(), 'counts' => $counts]);
+        return view('v2.admin.study-types.index', ['types' => StudyTypes::all(), 'counts' => $counts, 'categories' => \App\Models\V2\Category::where('active', true)->get()]);
     }
 
     /** A new type: blank, or a copy of an existing one. */

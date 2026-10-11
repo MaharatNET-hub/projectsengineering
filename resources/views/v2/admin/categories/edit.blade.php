@@ -33,7 +33,7 @@
       @if ($engineers->count() < 2)<p class="mute" style="font-size:12.5px;margin:6px 0 0">{{ __('Add engineers under') }} <a href="{{ route('v2.admin.users') }}">{{ __('Users') }}</a>.</p>@endif
     </div>
     <div>
-      <div class="f" style="margin-bottom:6px"><b>{{ __('Form-based studies routed here') }}</b></div>
+      <div class="f" style="margin-bottom:6px"><b>{{ __('Study types routed here') }}</b> <small class="mute">{{ __('— their files go to this category\'s engineers and are checked against its criteria') }}</small></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px 18px">@foreach ($types as $k => $d)<label class="check"><input type="checkbox" name="study_types[]" value="{{ $k }}" @checked(in_array($k, old('study_types', $c->study_types ?? [])))> {{ T::t($d['name']) }}</label>@endforeach</div>
     </div>
     @if ($new && $copyFrom->isNotEmpty())

@@ -36,7 +36,9 @@
 
     <div class="card pad" id="send">
       <h2>{{ __('Send to the client') }}</h2>
-      @if (($review['final'] ?? false) && $s->outputPath())
+      @if ($s->study_id)
+        <p class="mute" style="margin:0">{{ __('This is the file check of a study: it is emailed with the study\'s report from') }} <a href="{{ route('v2.admin.studies.show', $s->study_id) }}#send">{{ __('the study page') }}</a>.</p>
+      @elseif (($review['final'] ?? false) && $s->outputPath())
         <form class="form" method="post" action="{{ route('v2.admin.submissions.email', $s) }}">
           @csrf
           <div class="row2"><label class="f">{{ __('To') }}<input class="inp" type="email" name="to" value="{{ $s->client_email }}"></label><label class="f">{{ __('File') }}<input class="inp" value="{{ basename($s->outputPath()) }} · {{ number_format(filesize($s->outputPath()) / 1048576, 1) }} MB" disabled></label></div>
