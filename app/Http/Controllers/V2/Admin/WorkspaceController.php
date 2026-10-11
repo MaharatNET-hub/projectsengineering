@@ -100,6 +100,10 @@ class WorkspaceController extends DemoController
         $this->after($submission);
         $submission->refresh();
         Activity::log($submission, 'review.issued', "{$submission->decision} · {$submission->comment_count} comments" . ($submission->engineer ? " · {$submission->engineer}" : ''));
+        // a study's file check: the approved decision becomes the study's, and its report is rebuilt with the marked-up PDF
+        if ($submission->study_id && ($study = \App\Models\V2\Study::find($submission->study_id))) {
+            \App\Studies\Studies::approveCheck($study, $submission);
+        }
 
         return $res;
     }

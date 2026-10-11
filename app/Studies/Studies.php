@@ -125,4 +125,25 @@ final class Studies
 
         return $r;
     }
+
+    /** The engineer's sign-off decision on the marked-up file, as the study's decision. */
+    public const CHECK_DECISIONS = ['Approved' => 'approved', 'Approved as noted' => 'noted', 'Revise / Resubmit' => 'revise', 'Rejected' => 'rejected',
+        'Approved as noted / Resubmit' => 'revise', 'No action required / for information only' => 'approved'];
+
+    /**
+     * The engineer approved the marked-up file of a study: the study takes its decision and engineer, and its
+     * report is rebuilt with the marked-up review after it, ready to send.
+     */
+    public static function approveCheck(Study $s, Submission $check): void
+    {
+        $review = $check->review() ?? [];
+        $s->decision = self::CHECK_DECISIONS[$review['decision'] ?? ''] ?? $s->decision;
+        $s->engineer = ($review['engineerName'] ?? '') ?: $s->engineer;
+        if ($s->status === 'submitted') {
+            $s->status = 'review';
+        }
+        $s->save();
+        Activity::forStudy($s, 'study.check_approved', ($review['decision'] ?? '') . ' · ' . count($review['comments'] ?? []) . ' comment(s) on the drawings');
+        self::report($s);
+    }
 }

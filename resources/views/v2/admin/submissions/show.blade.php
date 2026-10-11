@@ -1,13 +1,13 @@
 @extends('v2.layouts.admin', ['title' => $s->project_name, 'icon' => 'file'])
 @section('crumb')<div class="mute" style="font-size:12.5px"><a href="{{ route('v2.admin.submissions') }}">{{ __('Submissions') }}</a> › <span class="mono">{{ $s->code }}</span></div>@endsection
 @section('actions')
-  @if ($s->hasOriginal() && $canEdit)
-    @if ($review)<a class="btn primary" href="{{ route('v2.admin.submissions.workspace', $s) }}"><x-v2.icon name="eye"/>{{ __('Open the check') }}</a>
-    @else<a class="btn primary" href="{{ route('v2.admin.submissions.workspace', [$s, 'start' => 1]) }}"><x-v2.icon name="check"/>{{ __('Start the check now') }}</a>@endif
-  @elseif ($s->hasOriginal() && $review)<a class="btn" href="{{ route('v2.admin.submissions.workspace', $s) }}"><x-v2.icon name="eye"/>{{ __('View the check') }}</a>@endif
   @if ($s->outputPath())<a class="btn" href="{{ route('v2.admin.submissions.issued', $s) }}"><x-v2.icon name="down"/>{{ ($review['final'] ?? false) ? 'Issued PDF' : 'Draft PDF' }}</a>@endif
 @endsection
 @section('content')
+@if ($s->hasOriginal() && ($canEdit || $review))
+  @include('v2.admin.partials.workspace', ['sub' => $s, 'title' => __('The check')])
+  <div style="height:16px"></div>
+@endif
 <div class="grid g21">
   <div class="grid">
     <div class="card pad">
@@ -30,7 +30,7 @@
       @elseif (! $s->hasOriginal())
         <p class="mute">{{ __('The original PDF is not on the server') }}{{ $s->status === 'uploading' ? ' — the upload was not completed.' : ' (it may have been removed by a host restart).' }}</p>
       @else
-        <p class="mute">{{ __('Not checked yet.') }}@if ($canEdit) <a href="{{ route('v2.admin.submissions.workspace', [$s, 'start' => 1]) }}"><b>{{ __('Start the check now') }}</b></a> {{ __('— it reads every page, applies the criteria of') }} {{ $s->category?->name_en ?? 'the default template' }} {{ __('and drafts the comment sheet.') }}@endif</p>
+        <p class="mute">{{ __('Not checked yet.') }}@if ($canEdit) <a href="#ws"><b>{{ __('Start the check now') }}</b></a> {{ __('— it reads every page, applies the criteria of') }} {{ $s->category?->name_en ?? 'the default template' }} {{ __('and drafts the comment sheet.') }}@endif</p>
       @endif
     </div>
 

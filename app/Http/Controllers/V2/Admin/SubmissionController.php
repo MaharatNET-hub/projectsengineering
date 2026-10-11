@@ -177,7 +177,10 @@ class SubmissionController extends Controller
     {
         $this->authorizeView($submission);
 
-        return view('v2.admin.submissions.workspace', ['s' => $submission]);
+        // the tool is shown on the study's page (or the submission's), no longer on a page of its own
+        $page = $submission->study_id ? route('v2.admin.studies.show', $submission->study_id) : route('v2.admin.submissions.show', $submission);
+
+        return redirect($page . (request()->boolean('start') ? '?start=1' : '') . '#ws');
     }
 
     /** Email the reviewed file to the client. */

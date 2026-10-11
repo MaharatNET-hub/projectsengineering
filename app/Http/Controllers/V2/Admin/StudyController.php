@@ -173,11 +173,7 @@ class StudyController extends Controller
         if (! $sub) {
             return back()->with('bad', __('No category takes this study type: link it under Categories first.'));
         }
-        if ($sub->review()) {
-            return redirect()->route('v2.admin.submissions.workspace', $sub);
-        }
-
-        return redirect()->route('v2.admin.submissions.workspace', [$sub, 'start' => 1]);
+        return redirect(route('v2.admin.studies.show', $study) . ($sub->review() ? '' : '?start=1') . '#ws');
     }
 
     public function file(Study $study)
@@ -198,8 +194,13 @@ class StudyController extends Controller
     public function email(Request $r, Study $study)
     {
         $data = $r->validate(['note' => 'nullable|string|max:3000', 'to' => 'nullable|email']);
+        // sending issues the study when the engineer has decided (here or by approving the marked-up file)
         if (! $study->isIssued()) {
-            return back()->with('bad', __('Issue the review first.'));
+            if (! $study->decision) {
+                return back()->with('bad', __('Choose the action (decision) before issuing.'));
+            }
+            $study->update(['status' => 'issued', 'issued_at' => $study->issued_at ?? now(), 'assigned_to' => $study->assigned_to ?? $r->user()->id]);
+            Activity::forStudy($study, 'study.issued', __('studies.decision.' . $study->decision, [], 'en'));
         }
         Studies::report($study);
         $to = ($data['to'] ?? null) ?: $study->client_email;

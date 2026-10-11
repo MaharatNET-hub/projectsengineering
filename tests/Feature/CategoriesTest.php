@@ -139,7 +139,8 @@ class CategoriesTest extends TestCase
         $this->get("/v2/admin/submissions/{$first->id}")->assertOk()->assertSee('Start the check now')->assertSee('LV switchgear');
         // the criteria were taken when the file arrived; re-run picks up the edited ones
         $this->post("/v2/admin/submissions/{$first->id}/restart")->assertRedirect("/v2/admin/submissions/{$first->id}/workspace?start=1");
-        $this->get("/v2/admin/submissions/{$first->id}/workspace")->assertOk()->assertSee('category: "LV switchgear', false);
+        $this->get("/v2/admin/submissions/{$first->id}/workspace?start=1")->assertRedirect(route('v2.admin.submissions.show', $first) . '?start=1#ws');
+        $this->get(route('v2.admin.submissions.show', $first))->assertOk()->assertSee('category: "LV switchgear', false);
         $this->postJson("/v2/admin/submissions/{$first->id}/api/start")->assertOk();
         for ($n = 0; $n < 30 && ! $this->postJson("/v2/admin/submissions/{$first->id}/api/step")->json('done'); $n++) {
         }
@@ -210,14 +211,20 @@ class CategoriesTest extends TestCase
 
         // the engineer approves the marked-up file and issues the study: one email carries both PDFs
         $this->actingAs($this->omar, 'web');
-        $this->get("/v2/admin/studies/{$study->id}")->assertOk()->assertSee(route('v2.admin.studies.check', $study), false);
-        \App\Review\Store::using($sub->dir(), function () use ($sub) {
-            \App\Review\Store::write('overrides.json', ['comments' => $sub->review()['comments'], 'decision' => 'Revise / Resubmit', 'engineer' => 'Omar', 'final' => true]);
-            \App\Review\Reviewer::run();
-        });
-        $study->update(['status' => 'issued', 'decision' => 'revise', 'issued_at' => now()]);
+        // the comments, the marked-up drawings and the approval are on the study's page
+        $this->get("/v2/admin/studies/{$study->id}")->assertOk()->assertSee('id="ws"', false)->assertSee(json_encode(url('v2/admin/submissions/' . $sub->id)), false);
+        // "Approve & generate" on the page: the study takes the decision, and one email carries one PDF
+        $this->postJson("/v2/admin/submissions/{$sub->id}/api/generate", ['comments' => $sub->review()['comments'], 'decision' => 'Revise / Resubmit', 'engineer' => 'Omar'])->assertOk();
+        $study->refresh();
+        $this->assertSame('revise', $study->decision);
+        $this->assertSame('Omar', $study->engineer);
+        $this->assertFalse($study->isIssued());
+        $report = new \App\Pdf\Reader((string) file_get_contents($study->reportPath()));
+        $marked = new \App\Pdf\Reader((string) file_get_contents($sub->fresh()->outputPath()));
+        $this->assertGreaterThan(count($marked->pages()), count($report->pages())); // the report, then the whole marked-up review
         $this->post("/v2/admin/studies/{$study->id}/email")->assertSessionHasNoErrors();
-        Mail::assertSent(\App\Mail\V2\StudyIssued::class, fn ($m) => $m->hasTo('sara@example.com') && $m->markup && count($m->attachments()) === 2);
+        $this->assertTrue($study->fresh()->isIssued()); // sending issues it
+        Mail::assertSent(\App\Mail\V2\StudyIssued::class, fn ($m) => $m->hasTo('sara@example.com') && $m->markup && count($m->attachments()) === 1);
     }
 
     public function test_form_studies_follow_their_category(): void
@@ -245,18 +252,18 @@ class CategoriesTest extends TestCase
         $this->post("/v2/admin/studies/{$study->id}/check")->assertForbidden(); // assigned to Sami
 
         $this->actingAs($this->sami, 'web');
-        $this->get("/v2/admin/studies/{$study->id}")->assertOk()->assertSee("/v2/admin/studies/{$study->id}/check", false);
+        $this->get("/v2/admin/studies/{$study->id}")->assertOk()->assertSee('id="ws"', false);
         $res = $this->post("/v2/admin/studies/{$study->id}/check");
         $sub = Submission::where('study_id', $study->id)->firstOrFail();
-        $res->assertRedirect(route('v2.admin.submissions.workspace', [$sub, 'start' => 1]));
+        $res->assertRedirect(route('v2.admin.studies.show', $study) . '?start=1#ws');
         $this->assertSame($this->lv->id, $sub->category_id);
         $this->assertSame($this->sami->id, $sub->assigned_to);
         $this->assertTrue($sub->hasOriginal());
         $this->assertFileExists($sub->dir() . '/rules.json');
-        $this->get(route('v2.admin.submissions.workspace', $sub))->assertOk();
+        $this->get(route('v2.admin.submissions.workspace', $sub))->assertRedirect(route('v2.admin.studies.show', $study) . '#ws');
 
         // a second click opens the same check (and runs it while it has not run yet)
-        $this->post("/v2/admin/studies/{$study->id}/check")->assertRedirect(route('v2.admin.submissions.workspace', [$sub, 'start' => 1]));
+        $this->post("/v2/admin/studies/{$study->id}/check")->assertRedirect(route('v2.admin.studies.show', $study) . '?start=1#ws');
         $this->assertSame(1, Submission::where('study_id', $study->id)->count());
     }
 }

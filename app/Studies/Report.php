@@ -251,15 +251,28 @@ final class Report
         $this->c->text('Date: ' . ($s->issued_at?->format('d M Y') ?? '____________'), self::M + 300, $this->y, 9.5, self::INK);
         $this->y -= 26;
         $this->c->text('Signature: ______________________', self::M, $this->y, 9.5, self::INK);
-        if ($s->isPdf()) {
+        if ($this->markup()) {
+            $this->y -= 26;
+            $this->para("The engineer's review of the supporting file follows this report: transmittal, comment sheet and the submitted drawings, stamped and marked up.", self::M, 500, 8.5, self::GREY);
+        } elseif ($s->isPdf()) {
             $this->y -= 26;
             $this->para('The supporting file submitted with this study follows this report.', self::M, 500, 8.5, self::GREY);
         }
     }
 
+    /** The approved review of the study's file from its category check (comment sheet + marked-up drawings), if any. */
+    private function markup(): ?string
+    {
+        $check = \App\Models\V2\Submission::where('study_id', $this->s->id)->first();
+
+        return $check && ! empty($check->review()['final']) ? $check->outputPath() : null;
+    }
+
     private function write(): string
     {
-        $src = $this->s->isPdf() ? Reader::open($this->s->filePath()) : new Reader(self::blankPdf());
+        // after the report: the engineer's marked-up review of the file once approved, otherwise the file as sent
+        $file = $this->markup() ?? ($this->s->isPdf() ? $this->s->filePath() : null);
+        $src = $file ? Reader::open($file) : new Reader(self::blankPdf());
         $w = new Writer($src);
         $fonts = [];
         foreach (Canvas::fontDicts() as $k => $d) {
@@ -277,7 +290,7 @@ final class Report
         }
         $count = $total;
         $cat = new Dict(['Type' => new Name('Catalog')]);
-        if ($this->s->isPdf()) {
+        if ($file) {
             $old = $src->root()->get('Pages');
             if ($old instanceof Ref) {
                 $w->replace($old, $src->dict($old)->copy()->set('Parent', $newRoot));
