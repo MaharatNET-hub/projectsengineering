@@ -1,4 +1,5 @@
-// v2 admin: the v1 analysis tool, bound to one submission (generated from public/app.js — keep the two in step).
+// v2 admin: the v1 analysis tool, bound to one submission and shown inside a dashboard page (the study or
+// submission page) in the element #ws. Everything it draws and listens to stays inside that element.
 import * as pdfjs from '../pdfjs/pdf.min.js';
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('../pdfjs/pdf.worker.min.js', import.meta.url).href;
 const STD_FONTS = new URL('../pdfjs/standard_fonts/', import.meta.url).href;
@@ -13,7 +14,8 @@ const api = async (p, body, opts = {}) => {
 };
 const outUrl = r => url(`out/${encodeURIComponent(r.pdfName)}?t=${S.stamp}`);
 
-const $ = (s, el = document) => el.querySelector(s);
+const ROOT = document.getElementById('ws');
+const $ = (s, el = ROOT) => el.querySelector(s);
 const mask = s => S.hide ? S.aliases.reduce((t, [real, alias]) => t.split(real).join(alias), String(s ?? '')) : String(s ?? '');
 const esc = s => mask(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const I = {
@@ -71,6 +73,7 @@ function disclosureCard() {
 }
 
 function crumbs() {
+  if (!$('#crumbs')) return;
   const p = S.data.project;
   const parts = [`<a href="${window.APP.back}">← ${esc(window.APP.code)}</a>`, `<span>›</span><span>${esc(mask(p.name))}</span>`];
   if (S.view === 'proc') parts.push('<span>›</span><span class="cur">Processing…</span>');
@@ -81,13 +84,11 @@ function crumbs() {
 function render() {
   crumbs();
   disclosureSwitch();
-  const h = S.view === 'ws' ? '#ws/' + S.tab : S.view === 'home' ? '#' : location.hash;
-  if (location.hash !== h) history.replaceState(null, '', h || '#');
+  if (S.view === 'ws' && /^#ws/.test(location.hash) && location.hash !== '#ws/' + S.tab) history.replaceState(null, '', '#ws/' + S.tab);
   const v = $('#view');
   if (S.view === 'home') v.innerHTML = homeView();
   if (S.view === 'proc') v.innerHTML = procView();
   if (S.view === 'ws') { v.innerHTML = wsView(); if (S.tab === 'drawings') drawPage(); }
-  window.scrollTo({ top: 0 });
 }
 
 /* ---------------- home ---------------- */
@@ -99,7 +100,6 @@ function homeView() {
     <div class="mute" style="margin:6px 0 6px">${esc(sub.file)} · ${esc(sub.size)} — the assistant reads every page, checks it against the criteria of <b>${esc(window.APP.category || 'the default template')}</b> and drafts the comment sheet.</div>
     ${window.APP.spec ? `<div style="margin:0 0 18px"><a href="${window.APP.spec}" target="_blank" rel="noopener">${I.check} Specification: ${esc(window.APP.specTitle || 'open')} ↗</a></div>` : '<div class="mute" style="margin:0 0 18px">No specification file uploaded for this category.</div>'}
     <button class="btn primary" type="button" data-run-sample>${I.check}Start the check now</button>
-    <a class="btn" href="${window.APP.back}" style="margin-inline-start:8px">Back</a>
   </div>`;
 }
 
@@ -150,7 +150,7 @@ async function runReview(file) {
   } catch (e) { toast('Could not process: ' + esc(e.message), 7000); S.view = 'home'; return render(); }
   await load();
   S.stamp = Date.now(); S.pdf = null; S.tab = 'comments'; S.page = null;
-  setTimeout(() => { S.view = 'ws'; render(); toast(`Review drafted in ${S.doneIn?.toFixed(0) ?? '–'} s · ${S.data.review.comments.length} comments`); }, 700);
+  setTimeout(() => { S.view = 'ws'; render(); ROOT.scrollIntoView({ block: 'start' }); toast(`Review drafted in ${S.doneIn?.toFixed(0) ?? '–'} s · ${S.data.review.comments.length} comments`); }, 700);
 }
 
 /* ---------------- workspace ---------------- */
@@ -249,7 +249,7 @@ function panelDrawer(name) {
     ${p.pages.map(g => `<div class="row"><span>Page ${g.page}</span><span class="v"><span class="chip">${esc(g.type)}</span> <a style="font-size:12px;cursor:pointer;color:var(--accent);margin-left:6px" data-view-page="${g.page}">open</a></span></div>`).join('')}
   </aside>`;
   el.id = 'drawer';
-  document.body.appendChild(el);
+  ROOT.appendChild(el);
 }
 
 // Generated pages at the front of the issued PDF (transmittal, comment sheet, client comments).
@@ -334,7 +334,7 @@ function accuracyTab() {
 }
 
 /* ---------------- events ---------------- */
-document.addEventListener('click', async e => {
+ROOT.addEventListener('click', async e => {
   const t = e.target.closest('[data-go],[data-tab],[data-run-sample],[data-view-page],[data-page],[data-step],[data-zoom],[data-del],[data-revert],[data-add],[data-kind],[data-panel],[data-close],[data-generate],[data-apply-rules],[data-open-rules]');
   if (!t) return;
   const d = t.dataset;
@@ -352,7 +352,7 @@ document.addEventListener('click', async e => {
   else if (d.zoom) { S.zoom = Math.min(3, Math.max(0.5, S.zoom + +d.zoom)); $('#zoomv').textContent = Math.round(S.zoom * 100) + '%'; drawPage(); }
   else if (d.del) { S.comments.splice(+d.del, 1); render(); }
   else if (d.revert) { const c = S.comments[+d.revert]; c.text = c.orig; render(); }
-  else if (d.add) { S.comments.push({ text: '', manual: true, status: 'fail', clause: 'Engineer', panels: [], pages: [] }); render(); setTimeout(() => [...document.querySelectorAll('[data-cmt]')].pop()?.focus(), 30); }
+  else if (d.add) { S.comments.push({ text: '', manual: true, status: 'fail', clause: 'Engineer', panels: [], pages: [] }); render(); setTimeout(() => [...ROOT.querySelectorAll('[data-cmt]')].pop()?.focus(), 30); }
   else if (d.kind) { S.filter.kind = d.kind; render(); }
   else if (d.panel) panelDrawer(d.panel);
   else if (d.close !== undefined) $('#drawer')?.remove();
@@ -366,14 +366,12 @@ document.addEventListener('click', async e => {
   else if (d.generate !== undefined) {
     const comments = S.comments.filter(c => c.text.trim()).map(({ orig, ...c }) => c);
     t.disabled = true; t.innerHTML = 'Generating…';
-    try { await api('generate', { comments, decision: S.decision, engineer: S.engineer }); } catch (err) { toast('Error: ' + esc(err.message), 6000); }
-    await load(); S.stamp = Date.now(); S.pdf = null;
-    render();
-    const r = S.data.review;
-    toast(`PDF issued · ${r.comments.length} comments · ${esc(r.decision)} — <a href="${outUrl(r)}" download="${esc(r.pdfName)}">Download</a> · <a href="${window.APP.back}#send">Email to client →</a>`, 12000);
+    try { await api('generate', { comments, decision: S.decision, engineer: S.engineer }); } catch (err) { toast('Error: ' + esc(err.message), 6000); t.disabled = false; t.innerHTML = `${I.check}Approve &amp; generate`; return; }
+    // the page around it (decision, report, sending) now reflects the approved PDF
+    location.hash = 'send'; location.reload();
   }
 });
-document.addEventListener('input', e => {
+ROOT.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset.cmt !== undefined) {
     S.comments[+t.dataset.cmt].text = t.value;
@@ -383,7 +381,7 @@ document.addEventListener('input', e => {
   if (t.id === 'engineer') S.engineer = t.value;
   if (t.dataset.q !== undefined) { S.filter.q = t.value; const pos = t.selectionStart; $('#tab').innerHTML = panelsTab(); const n = $('[data-q]'); n.focus(); n.setSelectionRange(pos, pos); }
 });
-document.addEventListener('change', e => {
+ROOT.addEventListener('change', e => {
   const t = e.target;
   if (t.id === 'hide') {
     S.hide = t.checked; render();
@@ -402,9 +400,9 @@ document.addEventListener('change', e => {
   if (t.id === 'file' && t.files[0]) runReview(t.files[0]);
   if (t.dataset.act) t.closest('.rule').classList.toggle('off', !t.checked);
 });
-document.addEventListener('dragover', e => { const d = e.target.closest?.('#drop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
-document.addEventListener('dragleave', e => e.target.closest?.('#drop')?.classList.remove('over'));
-document.addEventListener('drop', e => {
+ROOT.addEventListener('dragover', e => { const d = e.target.closest?.('#drop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
+ROOT.addEventListener('dragleave', e => e.target.closest?.('#drop')?.classList.remove('over'));
+ROOT.addEventListener('drop', e => {
   const d = e.target.closest?.('#drop'); if (!d) return; e.preventDefault(); d.classList.remove('over');
   const f = e.dataTransfer.files[0];
   if (f && f.type === 'application/pdf') runReview(f); else toast('Please drop a PDF file');
@@ -414,5 +412,5 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#drawer')
 await load();
 if (S.data.review) { const [v, tab] = location.hash.slice(1).split('/'); S.view = 'ws'; S.tab = (v === 'ws' && tab) || 'comments'; }
 render();
-// "Start the check now" on the request page lands here with ?start=1
-if (!S.data.review && new URLSearchParams(location.search).get('start')) { history.replaceState(null, '', location.pathname); runReview(); }
+// "Run the check" lands here with ?start=1
+if (!S.data.review && new URLSearchParams(location.search).get('start')) { history.replaceState(null, '', location.pathname + '#ws'); runReview(); }

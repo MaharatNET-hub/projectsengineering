@@ -96,10 +96,13 @@ class V2Test extends TestCase
         $this->post('/v2/admin/login', ['email' => 'admin@test.local', 'password' => 'wrong'])->assertSessionHasErrors('email');
         $this->post('/v2/admin/login', ['email' => 'admin@test.local', 'password' => 'Secret-Pass-123'])->assertRedirect();
         $this->assertAuthenticated();
-        foreach (['/v2/admin', '/v2/admin/submissions', "/v2/admin/submissions/{$s->id}", "/v2/admin/submissions/{$s->id}/workspace", '/v2/admin/messages',
+        foreach (['/v2/admin', '/v2/admin/submissions', "/v2/admin/submissions/{$s->id}", '/v2/admin/messages',
             '/v2/admin/projects', '/v2/admin/projects/create', '/v2/admin/services', '/v2/admin/company', '/v2/admin/settings', '/v2/admin/submissions/export'] as $url) {
             $this->get($url)->assertOk();
         }
+        // the analysis tool is part of the submission's page; its old address leads there
+        $this->get("/v2/admin/submissions/{$s->id}/workspace")->assertRedirect(route('v2.admin.submissions.show', $s) . '#ws');
+        $this->get("/v2/admin/submissions/{$s->id}")->assertSee('id="ws"', false)->assertSee('lib/v2/workspace.js', false);
 
         // the analysis tool's API, scoped to this submission; client details hidden by default
         $state = $this->getJson("/v2/admin/submissions/{$s->id}/api/state")->assertOk()->json();

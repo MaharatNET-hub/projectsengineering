@@ -448,5 +448,13 @@
   "This is the file check of a study: it is emailed with the study's report from": "هذا فحص ملف تابع لدراسة: يُرسل مع تقرير الدراسة من",
   "the study page": "صفحة الدراسة",
   "No category takes this study type: link it under Categories first.": "هذا النوع من الدراسات غير مربوط بأي تصنيف: اربطه أولاً من التصنيفات.",
-  "Not assigned": "غير مُسند"
+  "Not assigned": "غير مُسند",
+  "default criteria": "المعايير الافتراضية",
+  "Loading the check…": "جارٍ تحميل الفحص…",
+  "The check": "الفحص",
+  "The marked-up drawings are not approved yet: review the comments above and press \"Approve & generate\", otherwise the report goes without them.": "الرسومات المؤشّرة لم تُعتمد بعد: راجع الملاحظات في الأعلى واضغط «Approve & generate»، وإلا سيُرسل التقرير بدونها.",
+  "One PDF: the study report, then the transmittal, the comment sheet and the marked-up drawings.": "ملف PDF واحد: تقرير الدراسة، ثم كتاب الإحالة وورقة الملاحظات والرسومات المؤشّرة.",
+  "Preview the PDF": "معاينة الملف",
+  "Issue and email to the client": "إصدار وإرسال للعميل بالبريد",
+  "Available once the engineer decides: press \"Approve & generate\" on the drawings, or choose the action in the findings.": "متاح بعد قرار المهندس: اضغط «Approve & generate» على الرسومات، أو اختر القرار في الملاحظات."
 }

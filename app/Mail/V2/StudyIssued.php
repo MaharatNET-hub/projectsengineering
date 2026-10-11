@@ -11,15 +11,15 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
 /**
- * To the client: the issued review, with the marked-up file from the category check once the engineer
- * approved it (each PDF attached when small enough, otherwise the link only).
+ * To the client: the issued review as one PDF (the report, then the engineer's marked-up review of the file
+ * once approved), attached when small enough, otherwise the link only.
  */
 class StudyIssued extends Mailable
 {
     public bool $attached;
 
-    /** The approved marked-up file of the linked category check, if any. */
-    public ?string $markup = null;
+    /** The report carries the approved marked-up review of the file. */
+    public bool $markup = false;
 
     public function __construct(public Study $s, public string $note = '')
     {
@@ -27,9 +27,7 @@ class StudyIssued extends Mailable
         $f = $s->reportPath();
         $this->attached = is_file($f) && filesize($f) <= $max;
         $check = Submission::where('study_id', $s->id)->first();
-        if ($check && ! empty($check->review()['final']) && ($o = $check->outputPath()) && filesize($o) <= $max) {
-            $this->markup = $o;
-        }
+        $this->markup = $check && ! empty($check->review()['final']) && $check->outputPath();
     }
 
     public function envelope(): Envelope
@@ -45,9 +43,6 @@ class StudyIssued extends Mailable
 
     public function attachments(): array
     {
-        return array_values(array_filter([
-            $this->attached ? Attachment::fromPath($this->s->reportPath())->as("Study-{$this->s->code}.pdf")->withMime('application/pdf') : null,
-            $this->markup ? Attachment::fromPath($this->markup)->as("Study-{$this->s->code}-marked-up.pdf")->withMime('application/pdf') : null,
-        ]));
+        return $this->attached ? [Attachment::fromPath($this->s->reportPath())->as("Study-{$this->s->code}.pdf")->withMime('application/pdf')] : [];
     }
 }
