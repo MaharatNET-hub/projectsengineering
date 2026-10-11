@@ -14,6 +14,8 @@ window.APP = {
   chunk: 1048576,
   csrf: @json(csrf_token()),
   back: '#send',
+  // a study's page: the final download is the whole file (report + comment sheet + marked-up drawings)
+  fullPdf: @json($fullPdf ?? null),
   code: @json($code ?? $sub->code),
   category: @json($sub->category?->name_en),
   engineer: @json(($sub->assignee ?? auth()->user())->name),

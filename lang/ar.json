@@ -456,5 +456,6 @@
   "One PDF: the study report, then the transmittal, the comment sheet and the marked-up drawings.": "ملف PDF واحد: تقرير الدراسة، ثم كتاب الإحالة وورقة الملاحظات والرسومات المؤشّرة.",
   "Preview the PDF": "معاينة الملف",
   "Issue and email to the client": "إصدار وإرسال للعميل بالبريد",
-  "Available once the engineer decides: press \"Approve & generate\" on the drawings, or choose the action in the findings.": "متاح بعد قرار المهندس: اضغط «Approve & generate» على الرسومات، أو اختر القرار في الملاحظات."
+  "Available once the engineer decides: press \"Approve & generate\" on the drawings, or choose the action in the findings.": "متاح بعد قرار المهندس: اضغط «Approve & generate» على الرسومات، أو اختر القرار في الملاحظات.",
+  "Download the final PDF": "تحميل الملف النهائي (PDF)"
 }

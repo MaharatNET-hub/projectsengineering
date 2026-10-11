@@ -184,7 +184,7 @@ class CategoriesTest extends TestCase
         $token = $this->postJson('/v2/studies/upload', ['file_name' => 'panels.pdf', 'file_size' => strlen($pdf)])->json('token');
         $this->call('POST', "/v2/studies/upload/$token/chunk?index=0&total=1", [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], $pdf)->assertOk();
         $res = $this->postJson('/v2/studies/cable_sizing', ['client_name' => 'Sara', 'client_email' => 'sara@example.com', 'project_name' => 'Tower A', 'upload_token' => $token,
-            'values' => ['project' => ['v3' => 400, 'v1' => 230, 'vd_lighting' => 3, 'vd_power' => 5], 'circuits' => [['tag' => 'C1', 'use' => 'power', 'phases' => '3', 'load_kw' => '10', 'pf' => '0.9', 'length_m' => '20', 'material' => 'Cu', 'size_mm2' => '10', 'runs' => '1', 'derating' => '1', 'breaker_a' => '25']]]])
+            'values' => ['project' => ['v3' => 400, 'v1' => 230, 'vd_lighting' => 3, 'vd_power' => 5], 'circuits' => [['tag' => 'C1', 'use' => 'power', 'phases' => '3', 'load_kw' => '10', 'pf' => '0.9', 'length_m' => '20', 'material' => 'Cu', 'size_mm2' => '10', 'runs' => '1', 'derating' => '1', 'breaker_a' => '10']]]])
             ->assertOk()->assertJson(['check' => true]);
         $study = \App\Models\V2\Study::where('code', $res->json('code'))->firstOrFail();
         // the file is in the check of the type's category, with its engineer
@@ -202,6 +202,10 @@ class CategoriesTest extends TestCase
         $this->assertNotNull($sub->review());
         $this->assertNotEmpty($sub->review()['comments']);
         $this->assertFileExists($study->dir() . '/extracted.json'); // the study's own rules saw the file too
+        // one comment sheet: the findings on the form values sit with the comments on the drawings
+        $sheet = collect($sub->review()['comments']);
+        $this->assertTrue($sheet->contains(fn ($c) => ($c['origin'] ?? '') === 'form' && str_contains($c['text'], 'Protective device')));
+        $this->assertTrue($sheet->contains(fn ($c) => ($c['origin'] ?? '') === 'rule'));
         // only the visitor who sent it drives it
         $this->flushSession();
         $this->postJson($step, ['phase' => 'read'])->assertForbidden();
@@ -213,6 +217,7 @@ class CategoriesTest extends TestCase
         $this->actingAs($this->omar, 'web');
         // the comments, the marked-up drawings and the approval are on the study's page
         $this->get("/v2/admin/studies/{$study->id}")->assertOk()->assertSee('id="ws"', false)->assertSee(json_encode(url('v2/admin/submissions/' . $sub->id)), false);
+        $this->get("/v2/admin/studies/{$study->id}")->assertDontSee('name="action" value="issue"', false); // no second list of findings
         // "Approve & generate" on the page: the study takes the decision, and one email carries one PDF
         $this->postJson("/v2/admin/submissions/{$sub->id}/api/generate", ['comments' => $sub->review()['comments'], 'decision' => 'Revise / Resubmit', 'engineer' => 'Omar'])->assertOk();
         $study->refresh();
