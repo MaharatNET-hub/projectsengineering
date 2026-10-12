@@ -231,6 +231,11 @@ final class Reviewer
                     'panels' => $names, 'pages' => array_values(array_filter(array_map(fn ($h) => $h['evidence']['page'] ?? null, $hits)))];
             }
         }
+        // comments supplied with the criteria: for a study, its findings on the values entered in the form
+        foreach ($cfg['extraComments'] ?? [] as $c) {
+            $comments[] = ['origin' => $c['origin'] ?? 'form', 'rule' => $c['rule'] ?? 'F', 'status' => $c['status'] ?? 'fail', 'text' => self::ascii($c['text'] ?? ''),
+                'clause' => $c['clause'] ?? 'Study form', 'panels' => $c['panels'] ?? [], 'pages' => []];
+        }
         foreach ($comments as $i => &$c) {
             $c['no'] = $i + 1;
         }

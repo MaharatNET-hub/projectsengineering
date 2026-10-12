@@ -153,6 +153,7 @@ class StudyController extends Controller
     {
         abort_unless($this->canEdit($study), 403, 'This study is assigned to another engineer.');
         Studies::analyse($study);
+        Studies::syncCheck($study); // the comment sheet follows
         Activity::forStudy($study, 'study.reanalysed', count($study->keptFindings()) . ' finding(s)');
         Studies::report($study);
 

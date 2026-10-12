@@ -101,6 +101,42 @@ final class Studies
         return $sub;
     }
 
+    /** The study's kept findings on its form values, as comments of the check's comment sheet (English, like the PDF). */
+    public static function formComments(Study $s): array
+    {
+        $out = [];
+        foreach ($s->keptFindings() as $f) {
+            $text = trim((string) (StudyTypes::t($f['comment'] ?? '', 'en') ?: StudyTypes::t($f['label'] ?? '', 'en')));
+            if ($text === '') {
+                continue;
+            }
+            $out[] = ['origin' => 'form', 'rule' => 'F-' . $f['rule'], 'status' => $f['status'] === 'fail' ? 'fail' : 'unclear', 'text' => $text,
+                'clause' => trim(($f['clause'] ?? '') ?: 'Study form'), 'panels' => array_values(array_map('strval', $f['rows'] ?? []))];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Put the study's findings into its check's criteria, so the one comment sheet holds every comment; redraft the
+     * check when it was drafted already and the engineer has not edited or approved it.
+     */
+    public static function syncCheck(Study $s): void
+    {
+        $sub = Submission::where('study_id', $s->id)->first();
+        if (! $sub || ! is_file($sub->dir() . '/rules.json')) {
+            return;
+        }
+        \App\Review\Store::using($sub->dir(), function () use ($s, $sub) {
+            $cfg = \App\Review\Store::rules();
+            $cfg['extraComments'] = self::formComments($s);
+            \App\Review\Store::saveRules($cfg);
+            if ($sub->review() && ! is_file(\App\Review\Store::path('overrides.json')) && \App\Review\Store::read('extracted.json')) {
+                Submissions::sync($sub, \App\Review\Reviewer::run());
+            }
+        });
+    }
+
     /**
      * Drive the category check of a study's file one batch at a time. $review false only reads pages; the
      * final call drafts the marked-up review, then the study's own rules run again with what the file says.
@@ -114,12 +150,14 @@ final class Studies
         if ($sub->status === 'received' || ($sub->status === 'analysing' && ! is_file($sub->dir() . '/job.json'))) {
             Submissions::start($sub);
         }
+        // before drafting: the study's rules run with what the file says, and their findings join the comment sheet
+        if ($review && is_file($sub->dir() . '/extracted.json') && ! is_file($sub->dir() . '/review.json')) {
+            File::copy($sub->dir() . '/extracted.json', $s->dir() . '/extracted.json');
+            self::analyse($s);
+            self::syncCheck($s);
+        }
         $r = Submissions::step($sub->fresh(), (float) config('demo.step_seconds', 12), $review);
         if ($review && $r['done'] && empty($r['busy'])) {
-            if (is_file($sub->dir() . '/extracted.json')) {
-                File::copy($sub->dir() . '/extracted.json', $s->dir() . '/extracted.json');
-            }
-            self::analyse($s);
             self::report($s);
         }
 

@@ -8,13 +8,14 @@
 @extends('v2.layouts.admin', ['title' => $s->project_name, 'icon' => 'clipboard'])
 @section('crumb')<div class="mute" style="font-size:12.5px"><a href="{{ route('v2.admin.studies') }}">{{ __('Studies') }}</a> › <span class="mono">{{ $s->code }}</span> · {{ $s->revLabel() }}</div>@endsection
 @section('actions')
-  <a class="btn" href="{{ route('v2.admin.studies.report', $s) }}"><x-v2.icon name="down"/>{{ $s->isIssued() ? 'Report PDF' : 'Draft report PDF' }}</a>
+  @php $final = $check && ! empty($check->review()['final']); @endphp
+  <a class="btn {{ $final ? 'primary' : '' }}" href="{{ route('v2.admin.studies.report', $s) }}"><x-v2.icon name="down"/>{{ $final || $s->isIssued() ? __('Download the final PDF') : __('Draft report PDF') }}</a>
   <a class="btn" href="{{ route('v2.studies.show', $s->code) }}" target="_blank"><x-v2.icon name="eye"/>{{ __('Client page') }}</a>
 @endsection
 @section('content')
 {{-- the study's file checked against its category's criteria: comments, marked-up drawings and approval, on this page --}}
 @if ($check && $check->hasOriginal())
-  @include('v2.admin.partials.workspace', ['sub' => $check, 'code' => $s->code])
+  @include('v2.admin.partials.workspace', ['sub' => $check, 'code' => $s->code, 'fullPdf' => route('v2.admin.studies.report', $s)])
   <div style="height:16px"></div>
 @elseif ($s->isPdf())
   <div class="card pad" style="margin-bottom:16px;border-inline-start:4px solid var(--accent)">
@@ -37,6 +38,8 @@
       </div>
     @endif
     @unless ($canEdit)<div class="alert bad" style="margin:0">{{ __('Assigned to') }} {{ $s->assignee?->name }} {{ __('— only they or an admin can edit this review.') }}</div>@endunless
+    {{-- with a file check, its comment sheet above holds every comment (form values included): no second list here --}}
+    @unless ($check && $check->hasOriginal())
     <form class="card pad form" method="post" action="{{ route('v2.admin.studies.update', $s) }}">
       @csrf @method('patch')
       <fieldset @disabled(! $canEdit) style="border:0;padding:0;margin:0;display:grid;gap:14px">
@@ -79,6 +82,7 @@
       </div>
       </fieldset>
     </form>
+    @endunless
 
     <div class="card pad">
       <h2>{{ __('Values entered') }}</h2>

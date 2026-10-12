@@ -172,9 +172,14 @@ final class Report
         $this->c->text($sum, self::W - self::M - 12 - Canvas::width($sum, 8), $this->y - 28, 8, self::GREY);
         $this->y -= 62;
 
-        // findings
+        // findings: with an approved check they are all on its comment sheet, which follows this report
         $this->heading('FINDINGS');
-        if (! $kept) {
+        if ($this->markup()) {
+            $sheet = count($this->checkReview()['comments'] ?? []);
+            $this->para("All $sheet comments - on the values entered in the form and on the drawings - are on the comment sheet that follows this report, each tied to its specification clause and marked on the drawings.", self::M, self::W - 2 * self::M, 9.5, self::INK, true);
+            $this->y -= 4;
+            $kept = [];
+        } elseif (! $kept) {
             $this->para('No findings: every check that could be applied complies.', self::M, 500, 9.5, self::COLORS['pass'], true);
         }
         foreach ($kept as $n => $f) {
@@ -258,6 +263,11 @@ final class Report
             $this->y -= 26;
             $this->para('The supporting file submitted with this study follows this report.', self::M, 500, 8.5, self::GREY);
         }
+    }
+
+    private function checkReview(): array
+    {
+        return \App\Models\V2\Submission::where('study_id', $this->s->id)->first()?->review() ?? [];
     }
 
     /** The approved review of the study's file from its category check (comment sheet + marked-up drawings), if any. */

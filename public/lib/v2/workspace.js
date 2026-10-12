@@ -170,7 +170,7 @@ function wsView() {
       <select id="decision" class="${revise ? 'revise' : ''}">${DECISIONS.map(d => `<option ${d === S.decision ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
       <div><div class="label" style="margin-bottom:4px">Engineer</div><input id="engineer" placeholder="Name for sign-off" value="${esc(S.engineer || window.APP.engineer || '')}" style="border:1px solid var(--line2);border-radius:9px;padding:8px 10px;background:var(--panel);width:170px"></div>
       <div style="align-self:flex-end;display:flex;gap:8px">
-        <a class="btn" href="${outUrl(r)}" download="${esc(r.pdfName)}">${I.down}${r.final ? 'Download' : 'Draft PDF'}</a>
+        ${r.final && window.APP.fullPdf ? `<a class="btn" href="${window.APP.fullPdf}">${I.down}Download final PDF</a>` : `<a class="btn" href="${outUrl(r)}" download="${esc(r.pdfName)}">${I.down}${r.final ? 'Download' : 'Draft PDF'}</a>`}
         <button class="btn primary" data-generate>${I.check}Approve &amp; generate</button>
       </div>
     </div>
@@ -197,6 +197,7 @@ function commentsTab() {
         <textarea data-cmt="${i}" rows="${Math.max(2, Math.ceil(c.text.length / 110))}">${esc(c.text)}</textarea>
         <div class="meta">
           ${c.status === 'unclear' ? '<span class="chip warn"><span class="dot"></span>Clarification</span>' : c.manual ? '<span class="chip accent">Manual</span>' : '<span class="chip fail"><span class="dot"></span>Non-compliance</span>'}
+          ${c.origin === 'form' ? '<span class="chip accent">Form values</span>' : ''}
           ${c.clause ? `<span class="chip">${esc(c.clause)}</span>` : ''}
           ${c.panels?.length ? `<span class="chip" title="${esc(c.panels.join(', '))}">${c.panels.length} panel${c.panels.length > 1 ? 's' : ''}</span>` : ''}
           ${edited ? '<span class="chip accent">Edited</span>' : ''}
