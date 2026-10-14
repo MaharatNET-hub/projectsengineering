@@ -1,5 +1,7 @@
 # رفع الديمو على استضافة مجانية (Laravel بدون Docker وبدون كلمة سر)
 
+> عندك سيرفر VPS (متل DigitalOcean)؟ استعملي **[DEPLOY-VPS.md](DEPLOY-VPS.md)**: تركيب بأمر واحد مع MySQL، والبيانات ما بتنمسح.
+
 النسخة جاهزة للرفع في ملف واحد: **`release/submittal-review-laravel.zip`**
 فيه كل شي (مع مجلد `vendor`)، فما بتحتاجي Composer ولا Terminal ولا قاعدة بيانات.
 
