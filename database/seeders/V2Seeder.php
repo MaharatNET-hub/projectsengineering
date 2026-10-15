@@ -8,6 +8,7 @@ use App\Models\V2\Project;
 use App\Models\V2\Service;
 use App\Models\V2\Setting;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -29,6 +30,28 @@ class V2Seeder extends Seeder
         }
         if (! Category::query()->exists()) {
             $this->categories();
+        }
+        $this->categorySetup();
+    }
+
+    /**
+     * Every active category has someone to send its studies to (the admin, while it has no engineer), and a
+     * category without a specification takes the PDF placed at storage/app/seed/specs/{slug}.pdf.
+     */
+    private function categorySetup(): void
+    {
+        $admin = User::where('email', (string) config('v2.admin_email'))->first();
+        foreach (Category::where('active', true)->get() as $c) {
+            if ($admin && ! $c->engineers()->exists()) {
+                $c->engineers()->attach($admin->id);
+            }
+            $seed = storage_path("app/seed/specs/{$c->slug}.pdf");
+            if (! $c->specPath() && is_file($seed) && str_starts_with((string) file_get_contents($seed, false, null, 0, 4), '%PDF')) {
+                File::ensureDirectoryExists($c->dir());
+                File::copy($seed, $c->dir() . '/spec.pdf');
+                $c->update(['spec_file' => basename($seed), 'spec_size' => filesize($seed)]);
+                $this->command?->info("Specification of {$c->name_en}: " . basename($seed));
+            }
         }
     }
 
@@ -59,6 +82,7 @@ class V2Seeder extends Seeder
             if ($password !== '' && ! Hash::check($password, $user->password)) {
                 $user->update(['password' => Hash::make($password)]); // the env value is the source of truth
             }
+            $user->update(['role' => 'admin', 'active' => true]); // the account in .env is always an active admin
 
             return;
         }

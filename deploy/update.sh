@@ -16,6 +16,7 @@ git reset -q --hard "origin/$BRANCH"
 COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction --no-progress -q
 chown -R www-data:www-data storage bootstrap/cache
 sudo -u www-data php artisan v2:install          # new tables, if any
+sudo -u www-data php artisan db:seed --class='Database\Seeders\V2Seeder' --force -q   # admin from .env, category engineers and specs
 sudo -u www-data php artisan config:cache -q
 sudo -u www-data php artisan view:cache -q
 systemctl reload php8.3-fpm
