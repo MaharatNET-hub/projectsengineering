@@ -119,8 +119,7 @@ class ReviewPipelineTest extends TestCase
     public function test_state_api_masks_names(): void
     {
         $this->runReview(true);
-        $json = $this->get('/api/state')->assertOk()->getContent();
+        $json = (new \App\Http\Controllers\DemoController)->state()->getContent();
         $this->assertDoesNotMatchRegularExpression('/City Walk|Pioneer|Dubai Holding|Dewan/', $json);
-        $this->get('/')->assertOk()->assertSee('Submittal Review');
     }
 }

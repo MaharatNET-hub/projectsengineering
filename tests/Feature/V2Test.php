@@ -56,10 +56,10 @@ class V2Test extends TestCase
         $this->get('/v2/projects/does-not-exist')->assertNotFound();
     }
 
-    public function test_v1_is_untouched(): void
+    public function test_the_front_door_is_the_website(): void
     {
-        $this->get('/')->assertOk()->assertSee('Submittal Review');
-        $this->get('/api/state')->assertOk()->assertJsonStructure(['hide', 'project', 'rules']);
+        $this->get('/')->assertRedirect('/v2');
+        $this->get('/api/state')->assertNotFound(); // the old single-page tool is gone
     }
 
     public function test_contact_form_reaches_the_inbox(): void

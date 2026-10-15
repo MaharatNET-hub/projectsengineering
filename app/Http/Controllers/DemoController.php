@@ -10,17 +10,12 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * The demo's API: the browser drives the work in short requests (upload in chunks, read a batch of
- * pages per request) so it runs on shared/free hosting with a 30–60 s request limit.
+ * The review engine's API, used per submission through V2\Admin\WorkspaceController: the browser drives
+ * the work in short requests (read a batch of pages per request) so it runs on hosting with a 30–60 s limit.
  */
 class DemoController extends Controller
 {
     private const UPLOAD_CHUNK_BYTES = 1048576;
-
-    public function index()
-    {
-        return view('app', ['chunk' => self::UPLOAD_CHUNK_BYTES]);
-    }
 
     /** State for the UI. When client details are hidden the real names never leave the server. */
     public function state(): JsonResponse
