@@ -57,6 +57,16 @@ sudo bash /var/www/projectsengineering/deploy/update.sh
 
 بيجيب آخر نسخة، وبيضيف الجداول الجديدة إذا في، وبيحافظ على كل البيانات والملفات.
 
+## حساب المدير وملف المواصفات
+
+- حساب المدير بيتبع `V2_ADMIN_EMAIL` و`V2_ADMIN_PASSWORD` بملف `.env`. غيّريهم وبعدين شغّلي:
+  ```
+  php artisan config:clear
+  php artisan db:seed --class='Database\Seeders\V2Seeder' --force
+  ```
+- ملف المواصفات الأساسي لكل تصنيف: حطّي الـPDF بـ`storage/app/seed/specs/` باسم التصنيف، مثلاً `lv-switchgear.pdf` أو `hvac.pdf` أو `plumbing-fire.pdf`، وشغّلي نفس الأمر. بيطلع بالإدارة إنه انرفع.
+- أي تصنيف ما إله مهندس، دراساته بتروح للمدير.
+
 ## النسخ الاحتياطي
 
 - قاعدة البيانات: `projectsengineering` (أضيفيها لسكربت النسخ الاحتياطي الموجود عندك).

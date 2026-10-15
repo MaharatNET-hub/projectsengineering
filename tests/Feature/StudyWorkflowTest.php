@@ -64,6 +64,8 @@ class StudyWorkflowTest extends TestCase
 
     public function test_engineers_roles_assignment_and_activity(): void
     {
+        // categories start with the admin as their engineer; here the study arrives unassigned
+        \App\Models\V2\Category::all()->each(fn ($c) => $c->engineers()->detach());
         $s = $this->cableStudy();
         $this->actingAs($this->admin());
         $this->get('/v2/admin/users')->assertOk();

@@ -58,10 +58,30 @@ class CategoriesTest extends TestCase
         return $res;
     }
 
+    public function test_seeded_specification_and_admin_account(): void
+    {
+        $hvac = Category::where('slug', 'hvac')->firstOrFail();
+        $this->assertNull($hvac->specPath());
+        @mkdir(storage_path('app/seed/specs'), 0777, true);
+        file_put_contents(storage_path('app/seed/specs/hvac.pdf'), ReviewPipelineTest::submittal());
+        // the account in .env changes: the seeder makes it, as an active admin
+        config(['v2.admin_email' => 'info@maharatnet.com', 'v2.admin_password' => 'New-Admin-Pass-1']);
+        $this->seed(\Database\Seeders\V2Seeder::class);
+        $hvac->refresh();
+        $this->assertSame('hvac.pdf', $hvac->spec_file);
+        $this->assertFileExists($hvac->specPath());
+        $this->post('/v2/admin/login', ['email' => 'info@maharatnet.com', 'password' => 'New-Admin-Pass-1'])->assertRedirect();
+        $this->assertTrue(User::where('email', 'info@maharatnet.com')->first()->isAdmin());
+        $this->actingAs(User::where('email', 'info@maharatnet.com')->first());
+        $this->get('/v2/admin/categories')->assertSee('hvac.pdf');
+    }
+
     public function test_admin_sets_up_a_category(): void
     {
         $this->actingAs($this->admin());
-        $this->get('/v2/admin/categories')->assertOk()->assertSee('LV switchgear & distribution boards')->assertSee('No engineer');
+        // a fresh install sends every category's studies to the admin until engineers are chosen
+        $this->assertTrue($this->lv->engineers()->first()->is($this->admin()));
+        $this->get('/v2/admin/categories')->assertOk()->assertSee('LV switchgear & distribution boards')->assertSee('Administrator');
         $this->get("/v2/admin/categories/{$this->lv->id}/edit")->assertOk()->assertSee('Degree of protection');
 
         // engineers and the specification
