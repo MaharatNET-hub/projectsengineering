@@ -30,11 +30,11 @@ Upload guide (Arabic): [`DEPLOY.md`](DEPLOY.md) — shared/free PHP hosting via 
 | `app/Pdf/` | PDF engine: `Reader` (xref, object streams, filters, damaged-file repair), `Font` (ToUnicode, encodings, CID, widths), `ContentWalker` (text positions like pdf.js, image boxes, true redaction), `Writer` (full rewrite — removed content does not survive), `Canvas` (drawing with the standard fonts) |
 | `app/Review/Extractor.php` | Step 1 — classify pages, extract panel values, find text/logos to redact (time-boxed batches) |
 | `app/Review/Reviewer.php` | Step 2 — apply rules, draft comments, build the issued PDF |
-| `app/Http/Controllers/DemoController.php` | JSON API used by the page (chunked upload, batched reading) |
+| `app/Http/Controllers/DemoController.php` | The engine's JSON API (batched reading, review, generate), used per submission by `V2\Admin\WorkspaceController` |
 | `resources/demo/rules.json` | Project, rules and client-disclosure config (copied to `storage/app/demo/` on first run; edits from the UI go there) |
-| `public/app.js`, `public/style.css`, `public/lib/pdfjs/` | The single-page UI and the PDF viewer |
+| `public/style.css`, `public/lib/pdfjs/` | The review tool's styles (scoped into `public/lib/v2/ws-embed.css`) and the PDF viewer |
 | `routes/v2.php`, `app/Http/Controllers/V2/`, `app/V2/`, `app/Models/V2/` | v2 site, submission flow and admin; `App\V2\Submissions` runs the engine inside `storage/app/v2/submissions/{id}` |
-| `resources/views/v2/`, `lang/{ar,en}/v2.php`, `public/lib/v2/` | v2 views, translations and assets (`workspace.js` is generated from `public/app.js`) |
+| `resources/views/v2/`, `lang/{ar,en}/v2.php`, `public/lib/v2/` | v2 views, translations and assets (`workspace.js` is the review tool shown inside the study and submission pages) |
 | `database/seeders/` | `DemoSeeder` (v1 sample review), `V2Seeder` (admin account + site content) |
 
 ## Client disclosure
