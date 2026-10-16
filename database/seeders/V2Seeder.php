@@ -40,7 +40,10 @@ class V2Seeder extends Seeder
      */
     private function categorySetup(): void
     {
-        $admin = User::where('email', (string) config('v2.admin_email'))->first();
+        // the office account (database/migrations/…_maharat_admin_account.php), else the one in .env, else any admin
+        $admin = User::where('email', 'info@maharatnet.com')->where('active', true)->first()
+            ?? User::where('email', (string) config('v2.admin_email'))->first()
+            ?? User::where('role', 'admin')->where('active', true)->orderBy('id')->first();
         foreach (Category::where('active', true)->get() as $c) {
             if ($admin && ! $c->engineers()->exists()) {
                 $c->engineers()->attach($admin->id);
@@ -79,10 +82,8 @@ class V2Seeder extends Seeder
         $password = (string) config('v2.admin_password');
         $user = User::where('email', $email)->first();
         if ($user) {
-            if ($password !== '' && ! Hash::check($password, $user->password)) {
-                $user->update(['password' => Hash::make($password)]); // the env value is the source of truth
-            }
-            $user->update(['role' => 'admin', 'active' => true]); // the account in .env is always an active admin
+            // an existing account keeps its password (set in the database or under My account)
+            $user->update(['role' => 'admin', 'active' => true]);
 
             return;
         }
