@@ -42,7 +42,7 @@ class SubmissionController extends Controller
 
     private function filtered(Request $r)
     {
-        $q = self::visible($r->user())->with('category', 'assignee')->latest();
+        $q = self::visible($r->user())->standalone()->with('category', 'assignee')->latest();
         if ($r->filled('category')) {
             $q->where('category_id', $r->query('category'));
         }
@@ -65,7 +65,7 @@ class SubmissionController extends Controller
 
     public function index(Request $r)
     {
-        $counts = self::visible($r->user())->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $counts = self::visible($r->user())->standalone()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
 
         return view('v2.admin.submissions.index', ['items' => $this->filtered($r)->paginate(20)->withQueryString(), 'counts' => $counts, 'categories' => \App\Models\V2\Category::orderBy('sort')->get()]);
     }
@@ -128,6 +128,10 @@ class SubmissionController extends Controller
         }
         \App\V2\Submissions::prepare($submission, true);
         \App\Review\Store::using($submission->dir(), fn () => \App\Review\Store::delete('review.json', 'overrides.json', 'extracted.json', 'job.json', 'pages.json'));
+        // a study's check keeps the comments on the form values in its fresh criteria
+        if ($submission->study_id && ($study = \App\Models\V2\Study::find($submission->study_id))) {
+            \App\Studies\Studies::syncCheck($study);
+        }
         Activity::log($submission, 'analysis.restarted', 'criteria of ' . ($submission->category?->name_en ?? 'the default template'));
 
         return redirect()->route('v2.admin.submissions.workspace', [$submission, 'start' => 1]);

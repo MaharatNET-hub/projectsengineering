@@ -99,6 +99,9 @@ class WorkspaceController extends DemoController
         $res = parent::generate($r);
         $this->after($submission);
         $submission->refresh();
+        if ($r->json('final') === false) {
+            return $res; // "Update draft": the boxes are drawn, nothing is issued
+        }
         Activity::log($submission, 'review.issued', "{$submission->decision} · {$submission->comment_count} comments" . ($submission->engineer ? " · {$submission->engineer}" : ''));
         // a study's file check: the approved decision becomes the study's, and its report is rebuilt with the marked-up PDF
         if ($submission->study_id && ($study = \App\Models\V2\Study::find($submission->study_id))) {

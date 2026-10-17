@@ -22,6 +22,7 @@ final class Extractor
             throw new \RuntimeException('The PDF has no pages');
         }
         Store::clearDir('redact');
+        Store::clearDir('words');
         Store::delete('pages.json', 'extracted.json', 'overrides.json');
         $job = ['source' => $file, 'name' => $name, 'total' => $total, 'next' => 1, 'started' => microtime(true)];
         Store::write('job.json', $job);
@@ -100,6 +101,29 @@ final class Extractor
         return trim(preg_replace('/\s+/u', ' ', $s));
     }
 
+    /**
+     * Every text run of the page with its box, so comments that are not tied to an extracted value (the values
+     * of a study's form) can still be found and marked on the drawings. One small compressed file per page.
+     */
+    private static function saveWords(int $no, array $its): void
+    {
+        $words = [];
+        foreach ($its as $i) {
+            if (mb_strlen($i['s']) <= 60) {
+                $words[] = [$i['s'], round($i['x'], 1), round($i['y'] - 0.3 * $i['h'], 1), round($i['x'] + $i['w'], 1), round($i['y'] + $i['h'], 1)];
+            }
+        }
+        file_put_contents(Store::dir('words') . "/p$no.bin", gzcompress(json_encode(array_slice($words, 0, 3000)), 6));
+    }
+
+    /** The text runs of one page saved by saveWords(): [[text, x0, y0, x1, y1], …]. */
+    public static function words(int $no): array
+    {
+        $f = Store::dir('words') . "/p$no.bin";
+
+        return is_file($f) ? (json_decode((string) gzuncompress((string) file_get_contents($f)), true) ?: []) : [];
+    }
+
     /** Page-space box of a (possibly rotated) text run. */
     private static function textBox(array $t, float $width): array
     {
@@ -130,6 +154,7 @@ final class Extractor
             }
             $its[] = ['s' => $s, 'x' => $it['t'][4], 'y' => $it['t'][5], 'w' => $it['w'], 'h' => abs($it['t'][3]) ?: 9];
         }
+        self::saveWords($no, $its);
         $text = implode(' ', array_column($its, 's'));
         $rec = ['page' => $no, 'type' => self::pageType($text), 'panel' => self::panelName($its), 'values' => new \stdClass];
         $v = [];

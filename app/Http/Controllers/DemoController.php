@@ -210,11 +210,27 @@ class DemoController extends Controller
         $o = $r->json()->all();
 
         return $this->rebuild(fn () => Store::write('overrides.json', [
-            'comments' => array_values(array_map(fn ($c) => array_intersect_key((array) $c, array_flip(['text', 'status', 'manual', 'clause', 'panels', 'pages', 'rule', 'origin'])), (array) ($o['comments'] ?? []))),
+            'comments' => array_values(array_map(fn ($c) => self::keepMarks(array_intersect_key((array) $c, array_flip(['text', 'status', 'manual', 'clause', 'panels', 'pages', 'rule', 'origin', 'marks']))), (array) ($o['comments'] ?? []))),
             'decision' => in_array($o['decision'] ?? '', Reviewer::DECISIONS, true) ? $o['decision'] : null,
             'engineer' => mb_substr((string) ($o['engineer'] ?? ''), 0, 80),
-            'final' => true,
+            // "Update draft" redraws the marked-up PDF with the engineer's boxes without issuing it
+            'final' => ($o['final'] ?? true) !== false,
         ]));
+    }
+
+    /** The engineer's boxes on the drawings: [{page, bbox: [x0, y0, x1, y1]}], in PDF points, at most 50 per comment. */
+    private static function keepMarks(array $c): array
+    {
+        $marks = [];
+        foreach (array_slice((array) ($c['marks'] ?? []), 0, 50) as $m) {
+            $bb = array_values((array) ($m['bbox'] ?? []));
+            if ((int) ($m['page'] ?? 0) > 0 && count($bb) === 4 && count(array_filter($bb, 'is_numeric')) === 4) {
+                $marks[] = ['page' => (int) $m['page'], 'bbox' => array_map(fn ($v) => round((float) $v, 1), $bb)];
+            }
+        }
+        $c['marks'] = $marks;
+
+        return $c;
     }
 
     /** The issued PDF (supports HTTP range requests, so the viewer loads only the pages it shows). */

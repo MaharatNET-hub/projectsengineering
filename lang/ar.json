@@ -457,5 +457,8 @@
   "Preview the PDF": "معاينة الملف",
   "Issue and email to the client": "إصدار وإرسال للعميل بالبريد",
   "Available once the engineer decides: press \"Approve & generate\" on the drawings, or choose the action in the findings.": "متاح بعد قرار المهندس: اضغط «Approve & generate» على الرسومات، أو اختر القرار في الملاحظات.",
-  "Download the final PDF": "تحميل الملف النهائي (PDF)"
+  "Download the final PDF": "تحميل الملف النهائي (PDF)",
+  "File-only submittals": "تقديمات (ملف فقط)",
+  "Re-read the file": "إعادة قراءة الملف",
+  "Read the whole file again and draft the comments again? Your edits and boxes on this check are replaced.": "إعادة قراءة الملف كاملاً وصياغة الملاحظات من جديد؟ تعديلاتك ومربعاتك على هذا الفحص سيتم استبدالها."
 }

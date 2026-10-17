@@ -13,7 +13,7 @@
   <div class="tbl"><table class="t">
     <tr><th>{{ __('Received') }}</th><th>{{ __('Code') }}</th><th>{{ __('Project / title') }}</th><th>{{ __('Category') }}</th><th>{{ __('Status') }}</th><th></th></tr>
     @foreach ($mine as $s)
-      <tr class="click" onclick="location.href='{{ route('v2.admin.submissions.show', $s) }}'">
+      <tr class="click" onclick="location.href='{{ $s->adminUrl() }}'">
         <td>{{ $s->created_at->format('d M') }} <span class="mute">· {{ $s->created_at->diffForHumans(null, true) }}</span></td>
         <td class="mono">{{ $s->code }}</td>
         <td><b>{{ \Illuminate\Support\Str::limit($s->project_name, 40) }}</b><div class="mute" style="font-size:12.5px">{{ \Illuminate\Support\Str::limit($s->title ?: $s->file_name, 50) }}</div></td>

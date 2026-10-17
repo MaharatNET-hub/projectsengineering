@@ -253,6 +253,20 @@ final class Reviewer
             $sheet[] = $c;
         }
         $isFinal = ! empty($ov['final']);
+        // comments on a study's form values: found on the drawings by their circuit / panel tags
+        foreach ([&$comments, &$sheet] as &$list) {
+            foreach ($list as &$c) {
+                if (($c['origin'] ?? '') === 'form' && empty($c['marks'])) {
+                    $c['locs'] = [];
+                    foreach (array_slice($c['panels'] ?? [], 0, 5) as $tag) {
+                        $c['locs'] = array_merge($c['locs'], $this->locate((string) $tag, 2));
+                    }
+                    $c['pages'] = array_values(array_unique(array_merge($c['pages'] ?? [], array_column($c['locs'], 0))));
+                }
+            }
+            unset($c);
+        }
+        unset($list);
 
         // what the consultant actually wrote in the reference result (for the side-by-side)
         $engineer = [
@@ -276,6 +290,36 @@ final class Reviewer
         Store::write('review.json', $review);
 
         return $review;
+    }
+
+    /** @var array<int,array> text runs per page, read once */
+    private array $words = [];
+
+    /**
+     * Where a tag (a circuit or panel name from a study's form) appears in the file: [[page, bbox], …], at most
+     * $max. A run matches when it is the tag or starts/ends with it as a whole word.
+     */
+    private function locate(string $tag, int $max): array
+    {
+        $want = mb_strtolower(trim($tag));
+        if (mb_strlen($want) < 2) {
+            return [];
+        }
+        $re = '/(^|\s)' . preg_quote($want, '/') . '(\s|$)/u';
+        $out = [];
+        for ($p = 1; $p <= (int) $this->ex['pageCount'] && count($out) < $max; $p++) {
+            $this->words[$p] ??= Extractor::words($p);
+            foreach ($this->words[$p] as [$t, $x0, $y0, $x1, $y1]) {
+                if (preg_match($re, mb_strtolower($t))) {
+                    $out[] = [$p, [$x0, $y0, $x1, $y1]];
+                    if (count($out) >= $max) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $out;
     }
 
     // ---------------------------------------------------------------- PDF
@@ -543,6 +587,15 @@ final class Reviewer
                 ? (! empty($rule['markup']) ? "{$rule['markup']} - refer Comment $no" : "NOT ACCEPTED - refer Comment $no")
                 : "CLARIFY - refer Comment $no";
             $marks[$x['evidence']['page']][] = ['bbox' => $x['evidence']['bbox'] ?? null, 'label' => self::ascii($label), 'color' => $x['status'] === 'fail' ? self::RED : self::AMBER, 'rule' => $rule['label']];
+        }
+        // the engineer's own boxes, and the form-value comments where their tags were found
+        foreach ($sheet as $s) {
+            $unclear = ($s['status'] ?? 'fail') === 'unclear';
+            $boxes = array_map(fn ($m) => [(int) $m['page'], $m['bbox']], $s['marks'] ?? []) ?: ($s['locs'] ?? []);
+            foreach ($boxes as [$pg, $bb]) {
+                $marks[$pg][] = ['bbox' => array_map('floatval', $bb), 'label' => ($unclear ? 'CLARIFY' : 'NOT ACCEPTED') . " - refer Comment {$s['no']}",
+                    'color' => $unclear ? self::AMBER : self::RED, 'rule' => ! empty($s['marks']) ? 'Engineer' : 'Form values'];
+            }
         }
         $pagesRec = $this->ex['pages'];
         $redDir = Store::dir('redact');
