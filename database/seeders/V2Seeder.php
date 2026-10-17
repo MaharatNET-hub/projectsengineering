@@ -8,7 +8,6 @@ use App\Models\V2\Project;
 use App\Models\V2\Service;
 use App\Models\V2\Setting;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -48,12 +47,8 @@ class V2Seeder extends Seeder
             if ($admin && ! $c->engineers()->exists()) {
                 $c->engineers()->attach($admin->id);
             }
-            $seed = storage_path("app/seed/specs/{$c->slug}.pdf");
-            if (! $c->specPath() && is_file($seed) && str_starts_with((string) file_get_contents($seed, false, null, 0, 4), '%PDF')) {
-                File::ensureDirectoryExists($c->dir());
-                File::copy($seed, $c->dir() . '/spec.pdf');
-                $c->update(['spec_file' => basename($seed), 'spec_size' => filesize($seed)]);
-                $this->command?->info("Specification of {$c->name_en}: " . basename($seed));
+            if ($c->adoptSeedSpec()) {
+                $this->command?->info("Specification of {$c->name_en}: {$c->spec_file}");
             }
         }
     }

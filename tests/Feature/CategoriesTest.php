@@ -78,6 +78,21 @@ class CategoriesTest extends TestCase
         $this->get('/v2/admin/categories')->assertSee('hvac.pdf');
     }
 
+    public function test_a_dropped_specification_is_taken_when_the_list_opens(): void
+    {
+        $lv = $this->lv;
+        // a left-over spec.pdf from a failed upload, and a PDF with bytes before its header (valid for PDF readers)
+        @mkdir($lv->dir(), 0777, true);
+        file_put_contents($lv->dir() . '/spec.pdf', 'partial');
+        @mkdir(storage_path('app/seed/specs'), 0777, true);
+        file_put_contents(storage_path('app/seed/specs/LV-Switchgear.PDF'), "\xEF\xBB\xBF\n" . ReviewPipelineTest::submittal());
+        $this->assertNull($lv->fresh()->spec_file);
+        $this->actingAs($this->admin());
+        $this->get('/v2/admin/categories')->assertOk()->assertSee('LV-Switchgear.PDF');
+        $this->assertSame('LV-Switchgear.PDF', $lv->fresh()->spec_file);
+        $this->assertStringContainsString('%PDF', (string) file_get_contents($lv->specPath()));
+    }
+
     public function test_admin_sets_up_a_category(): void
     {
         $this->actingAs($this->admin());

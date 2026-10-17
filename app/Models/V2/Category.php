@@ -41,6 +41,29 @@ class Category extends Model
         return storage_path('app/v2/categories/' . $this->id);
     }
 
+    /**
+     * Take the specification PDF placed at storage/app/seed/specs/{slug}.pdf (any letter case) while the category
+     * has none recorded; true when it did. Lets a large specification in without the server's upload limit.
+     */
+    public function adoptSeedSpec(): bool
+    {
+        if ($this->spec_file) {
+            return false;
+        }
+        $seed = collect(glob(storage_path('app/seed/specs/*')) ?: [])->first(fn ($f) => strtolower(basename($f)) === strtolower($this->slug) . '.pdf');
+        // PDF readers accept up to 1 KB before the %PDF header
+        if (! $seed || ! is_file($seed) || ! str_contains((string) file_get_contents($seed, false, null, 0, 1024), '%PDF')) {
+            return false;
+        }
+        File::ensureDirectoryExists($this->dir());
+        if (! @copy($seed, $this->dir() . '/spec.pdf')) {
+            return false;
+        }
+        $this->update(['spec_file' => basename($seed), 'spec_size' => filesize($seed)]);
+
+        return true;
+    }
+
     /** The uploaded specification PDF (private; served to office users only). */
     public function specPath(): ?string
     {
