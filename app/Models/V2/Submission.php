@@ -46,6 +46,18 @@ class Submission extends Model
         return storage_path('app/v2/submissions/' . $this->id);
     }
 
+    /** File-only submittals (a study's file check belongs to its study). */
+    public function scopeStandalone($q)
+    {
+        return $q->whereNull('study_id');
+    }
+
+    /** Where the office opens it: a study's file check is shown on the study's page. */
+    public function adminUrl(): string
+    {
+        return $this->study_id ? route('v2.admin.studies.show', $this->study_id) : route('v2.admin.submissions.show', $this);
+    }
+
     public function originalPath(): string
     {
         return $this->dir() . '/original.pdf';

@@ -78,6 +78,56 @@ class CategoriesTest extends TestCase
         $this->get('/v2/admin/categories')->assertSee('hvac.pdf');
     }
 
+    public function test_comments_are_marked_on_the_drawings(): void
+    {
+        $this->lv->engineers()->sync([$this->omar->id]);
+        $pdf = ReviewPipelineTest::submittal();
+        $token = $this->postJson('/v2/studies/upload', ['file_name' => 'panels.pdf', 'file_size' => strlen($pdf)])->json('token');
+        $this->call('POST', "/v2/studies/upload/$token/chunk?index=0&total=1", [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], $pdf)->assertOk();
+        // a circuit named like a panel of the file, with a breaker below its design current
+        $code = $this->postJson('/v2/studies/cable_sizing', ['client_name' => 'Sara', 'client_email' => 'sara@example.com', 'project_name' => 'Tower A', 'upload_token' => $token,
+            'values' => ['project' => ['v3' => 400, 'v1' => 230, 'vd_lighting' => 3, 'vd_power' => 5], 'circuits' => [['tag' => 'EMDB-A-1', 'use' => 'power', 'phases' => '3', 'load_kw' => '10', 'pf' => '0.9', 'length_m' => '20', 'material' => 'Cu', 'size_mm2' => '10', 'runs' => '1', 'derating' => '1', 'breaker_a' => '10']]]])
+            ->assertOk()->json('code');
+        $study = \App\Models\V2\Study::where('code', $code)->firstOrFail();
+        $step = "/v2/studies/r/$code/step";
+        for ($i = 0; $i < 50 && ! $this->postJson($step, ['phase' => 'read'])->json('done'); $i++) {
+        }
+        $this->postJson($step, ['phase' => 'review'])->assertOk();
+        $sub = Submission::where('study_id', $study->id)->firstOrFail();
+
+        // the form-value comment was found on the drawings by its circuit tag, and marked there
+        $form = collect($sub->review()['comments'])->firstWhere('origin', 'form');
+        $this->assertNotEmpty($form['pages']);
+        $page = $form['pages'][0];
+        $this->assertTrue(collect($sub->review()['marks'][$page])->contains(fn ($m) => str_contains($m['label'], 'refer Comment ' . $form['no'])));
+
+        // the engineer draws a box on another page and links it to a comment: "Update draft" draws it, nothing is issued
+        $this->actingAs($this->omar, 'web');
+        $comments = $sub->review()['comments'];
+        $comments[0]['marks'] = [['page' => 2, 'bbox' => [100, 100, 220, 140]], ['page' => 0, 'bbox' => [1, 2, 3]]];
+        $this->postJson("/v2/admin/submissions/{$sub->id}/api/generate", ['comments' => $comments, 'decision' => 'Revise / Resubmit', 'engineer' => 'Omar', 'final' => false])->assertOk();
+        $r = $sub->fresh()->review();
+        $this->assertFalse($r['final']);
+        $this->assertEquals([['page' => 2, 'bbox' => [100, 100, 220, 140]]], $r['comments'][0]['marks']); // the invalid box is dropped
+        $this->assertTrue(collect($r['marks'][2])->contains(fn ($m) => $m['rule'] === 'Engineer' && $m['label'] === 'NOT ACCEPTED - refer Comment 1'));
+        $this->assertNotSame('issued', $study->fresh()->status);
+    }
+
+    public function test_a_dropped_specification_is_taken_when_the_list_opens(): void
+    {
+        $lv = $this->lv;
+        // a left-over spec.pdf from a failed upload, and a PDF with bytes before its header (valid for PDF readers)
+        @mkdir($lv->dir(), 0777, true);
+        file_put_contents($lv->dir() . '/spec.pdf', 'partial');
+        @mkdir(storage_path('app/seed/specs'), 0777, true);
+        file_put_contents(storage_path('app/seed/specs/LV-Switchgear.PDF'), "\xEF\xBB\xBF\n" . ReviewPipelineTest::submittal());
+        $this->assertNull($lv->fresh()->spec_file);
+        $this->actingAs($this->admin());
+        $this->get('/v2/admin/categories')->assertOk()->assertSee('LV-Switchgear.PDF');
+        $this->assertSame('LV-Switchgear.PDF', $lv->fresh()->spec_file);
+        $this->assertStringContainsString('%PDF', (string) file_get_contents($lv->specPath()));
+    }
+
     public function test_admin_sets_up_a_category(): void
     {
         $this->actingAs($this->admin());

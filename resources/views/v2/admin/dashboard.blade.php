@@ -34,13 +34,13 @@
     <div class="pad" style="padding-bottom:6px;display:flex;justify-content:space-between"><h2>{{ __('Review queue') }}</h2><a href="{{ route('v2.admin.submissions') }}">{{ __('All submissions →') }}</a></div>
     @if ($queue->isEmpty())<div class="empty">{{ __('Nothing waiting. New submittals from the website appear here.') }}</div>@else
     <div class="tbl"><table class="t"><tr><th>{{ __('Code') }}</th><th>{{ __('Project') }}</th><th>{{ __('Client') }}</th><th>{{ __('Status') }}</th><th class="num">{{ __('Waiting') }}</th></tr>
-      @foreach ($queue as $s)<tr class="click" onclick="location.href='{{ route('v2.admin.submissions.show', $s) }}'"><td class="mono">{{ $s->code }}</td><td>{{ \Illuminate\Support\Str::limit($s->project_name, 40) }}</td><td>{{ $s->client_company ?: $s->client_name }}</td><td>@include('v2.admin.partials.status')</td><td class="num">{{ $s->created_at->diffForHumans(null, true) }}</td></tr>@endforeach
+      @foreach ($queue as $s)<tr class="click" onclick="location.href='{{ $s->adminUrl() }}'"><td class="mono">{{ $s->code }}</td><td>{{ \Illuminate\Support\Str::limit($s->project_name, 40) }}</td><td>{{ $s->client_company ?: $s->client_name }}</td><td>@include('v2.admin.partials.status')</td><td class="num">{{ $s->created_at->diffForHumans(null, true) }}</td></tr>@endforeach
     </table></div>@endif
   </div>
   <div class="card pad">
     <h2>{{ __('Activity') }}</h2>
     <ul class="feed">
-      @forelse ($activity as $a)<li><span>{{ str_replace(['.', '_'], ' ', $a->action) }}@if ($a->submission) · <a href="{{ route('v2.admin.submissions.show', $a->submission) }}" class="mono">{{ $a->submission->code }}</a>@elseif ($a->study) · <a href="{{ route('v2.admin.studies.show', $a->study) }}" class="mono">{{ $a->study->code }}</a>@endif @if ($a->detail)<span class="mute"> — {{ \Illuminate\Support\Str::limit($a->detail, 60) }}</span>@endif</span><span class="when">{{ $a->created_at->diffForHumans(null, true) }}</span></li>
+      @forelse ($activity as $a)<li><span>{{ str_replace(['.', '_'], ' ', $a->action) }}@if ($a->submission) · <a href="{{ $a->submission->adminUrl() }}" class="mono">{{ $a->submission->code }}</a>@elseif ($a->study) · <a href="{{ route('v2.admin.studies.show', $a->study) }}" class="mono">{{ $a->study->code }}</a>@endif @if ($a->detail)<span class="mute"> — {{ \Illuminate\Support\Str::limit($a->detail, 60) }}</span>@endif</span><span class="when">{{ $a->created_at->diffForHumans(null, true) }}</span></li>
       @empty<li class="mute">{{ __('No activity yet.') }}</li>@endforelse
     </ul>
   </div>
@@ -50,7 +50,7 @@
   <div class="pad" style="padding-bottom:6px"><h2>{{ __('Latest submissions') }}</h2></div>
   @if ($recent->isEmpty())<div class="empty">{{ __('No submissions yet — try the form at') }} <a href="{{ route('v2.submit') }}" target="_blank">{{ route('v2.submit') }}</a>.</div>@else
   <div class="tbl"><table class="t"><tr><th>{{ __('Received') }}</th><th>{{ __('Code') }}</th><th>{{ __('Project') }}</th><th>{{ __('Client') }}</th><th class="num">{{ __('Pages') }}</th><th>{{ __('Decision') }}</th><th>{{ __('Status') }}</th></tr>
-    @foreach ($recent as $s)<tr class="click" onclick="location.href='{{ route('v2.admin.submissions.show', $s) }}'"><td>{{ $s->created_at->format('d M, H:i') }}</td><td class="mono">{{ $s->code }}</td><td>{{ \Illuminate\Support\Str::limit($s->project_name, 38) }}</td><td>{{ $s->client_name }}</td><td class="num">{{ $s->page_count ?? '–' }}</td><td>{{ $s->decision ?? '–' }}</td><td>@include('v2.admin.partials.status')</td></tr>@endforeach
+    @foreach ($recent as $s)<tr class="click" onclick="location.href='{{ $s->adminUrl() }}'"><td>{{ $s->created_at->format('d M, H:i') }}</td><td class="mono">{{ $s->code }}</td><td>{{ \Illuminate\Support\Str::limit($s->project_name, 38) }}</td><td>{{ $s->client_name }}</td><td class="num">{{ $s->page_count ?? '–' }}</td><td>{{ $s->decision ?? '–' }}</td><td>@include('v2.admin.partials.status')</td></tr>@endforeach
   </table></div>@endif
 </div>
 @endsection

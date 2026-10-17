@@ -267,14 +267,19 @@ function drawingsTab() {
     `<button data-page="1" class="${S.page === 1 ? 'on' : ''}"><b>Page 1 · Cover</b><small>Review stamp</small></button>`,
     `<div class="label grp">Marked pages · ${marked.length}</div>`,
     ...marked.map(pg => `<button data-page="${pg}" class="${S.page === pg ? 'on' : ''}"><b>Page ${pg}</b> <span class="mute" style="font-size:12px">${esc(pageToPanel[pg] || '')}</span><small>${r.marks[pg].map(m => `<span style="color:${m.fail ? 'var(--fail)' : 'var(--warn)'}">●</span> ${esc(m.rule)}`).join(' · ')}</small></button>`)];
+  const onDrawing = typeof S.page === 'number';
   return `<div class="viewer">
     <div class="card pagelist">${list.join('')}</div>
     <div class="card canvas-wrap">
       <div class="canvas-bar">
         <button class="btn sm" data-step="-1">${I.left}</button><button class="btn sm" data-step="1">${I.right}</button>
         <b id="pgtitle" class="grow"></b>
+        <label class="mute" style="font-size:12.5px">Page <input type="number" min="1" max="${r.pageCount}" value="${onDrawing ? S.page : ''}" data-goto style="width:64px;border:1px solid var(--line2);border-radius:7px;padding:3px 6px;background:var(--panel)"> / ${r.pageCount}</label>
+        ${onDrawing ? `<button class="btn sm ${S.marking ? 'primary' : ''}" data-marking title="Draw a box on the drawing and link it to a comment">✎ ${S.marking ? 'Drawing… drag a box' : 'Mark on drawing'}</button>` : ''}
+        ${S.dirty ? `<button class="btn sm primary" data-draft title="Redraw the marked-up PDF with your boxes (not issued)">${I.check}Update draft</button>` : ''}
         <button class="btn sm" data-zoom="-0.25">−</button><span class="mono" id="zoomv">${Math.round(S.zoom * 100)}%</span><button class="btn sm" data-zoom="0.25">+</button>
       </div>
+      <div id="markForm"></div>
       <div class="canvas-box" id="cbox"><div class="loading">Loading drawing…</div></div>
     </div></div>`;
 }
@@ -296,8 +301,82 @@ async function drawPage() {
   cv.width = vp.width; cv.height = vp.height; cv.style.width = vp.width / (window.devicePixelRatio || 1) + 'px';
   await page.render({ canvasContext: cv.getContext('2d'), viewport: vp, intent: 'print' }).promise; // 'print' avoids requestAnimationFrame (stalls in background tabs)
   const box = $('#cbox'); if (!box) return;
-  box.innerHTML = ''; box.appendChild(cv);
+  // the canvas sits in a frame that also carries the engineer's boxes (screen ↔ PDF points through the viewport)
+  S.vpCss = page.getViewport({ scale: S.zoom });
+  const frame = document.createElement('div');
+  frame.id = 'cframe'; frame.style.cssText = `position:relative;display:inline-block;cursor:${S.marking && typeof S.page === 'number' ? 'crosshair' : 'default'}`;
+  frame.appendChild(cv);
+  box.innerHTML = ''; box.appendChild(frame);
+  drawBoxes();
   $('#pgtitle').textContent = typeof S.page === 'string' ? (issuedPages().find(g => g.id === S.page)?.title || 'Issued page') : `Submittal page ${S.page} of ${r.pageCount}`;
+}
+
+/* ---------------- the engineer's boxes on the drawings ---------------- */
+// boxes linked to comments on the page shown; dashed until "Update draft" draws them into the PDF
+function drawBoxes() {
+  const frame = $('#cframe'); if (!frame || typeof S.page !== 'number' || !S.vpCss) return;
+  frame.querySelectorAll('.mk').forEach(e => e.remove());
+  S.comments.forEach((c, ci) => (c.marks || []).forEach((m, mi) => {
+    if (m.page !== S.page) return;
+    const [x0, y0, x1, y1] = S.vpCss.convertToViewportRectangle(m.bbox);
+    const el = document.createElement('div');
+    el.className = 'mk';
+    el.style.cssText = `position:absolute;left:${Math.min(x0, x1)}px;top:${Math.min(y0, y1)}px;width:${Math.abs(x1 - x0)}px;height:${Math.abs(y1 - y0)}px;border:2px dashed ${c.status === 'unclear' ? '#d97706' : '#dc2626'};background:rgba(220,38,38,.06)`;
+    el.innerHTML = `<span style="position:absolute;top:-20px;left:-2px;background:${c.status === 'unclear' ? '#d97706' : '#dc2626'};color:#fff;font:700 11px Inter,sans-serif;padding:1px 6px;border-radius:4px;white-space:nowrap">Comment ${ci + 1} <button data-unmark="${ci}:${mi}" title="Remove this box" style="border:0;background:none;color:#fff;cursor:pointer;padding:0 0 0 4px">✕</button></span>`;
+    frame.appendChild(el);
+  }));
+}
+// drag a box on the drawing (mark mode), then link it to a comment
+let drag = null;
+ROOT.addEventListener('pointerdown', e => {
+  const frame = e.target.closest('#cframe');
+  if (!frame || !S.marking || typeof S.page !== 'number' || e.target.closest('.mk')) return;
+  e.preventDefault();
+  const r = frame.getBoundingClientRect();
+  drag = { frame, x: e.clientX - r.left, y: e.clientY - r.top, el: document.createElement('div') };
+  drag.el.style.cssText = 'position:absolute;border:2px solid #dc2626;background:rgba(220,38,38,.12);pointer-events:none';
+  frame.appendChild(drag.el);
+  frame.setPointerCapture(e.pointerId);
+});
+ROOT.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const r = drag.frame.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  Object.assign(drag.el.style, { left: Math.min(x, drag.x) + 'px', top: Math.min(y, drag.y) + 'px', width: Math.abs(x - drag.x) + 'px', height: Math.abs(y - drag.y) + 'px' });
+});
+ROOT.addEventListener('pointerup', e => {
+  if (!drag) return;
+  const r = drag.frame.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, d = drag;
+  drag = null;
+  if (Math.abs(x - d.x) < 6 || Math.abs(y - d.y) < 6) { d.el.remove(); return; }
+  const [ax, ay] = S.vpCss.convertToPdfPoint(d.x, d.y), [bx, by] = S.vpCss.convertToPdfPoint(x, y);
+  S.pendingBox = { page: S.page, bbox: [Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by)].map(v => Math.round(v * 10) / 10), el: d.el };
+  linkForm();
+});
+function linkForm() {
+  const f = $('#markForm'); if (!f || !S.pendingBox) return;
+  f.innerHTML = `<div class="card pad" style="margin-bottom:10px;display:grid;gap:8px;border-left:3px solid var(--fail)">
+    <b>Link this box to a comment</b>
+    <select data-link-to style="border:1px solid var(--line2);border-radius:8px;padding:6px 8px;background:var(--panel)">
+      <option value="new">+ New engineer's comment</option>
+      ${S.comments.map((c, i) => `<option value="${i}">Comment ${i + 1} — ${esc(c.text.slice(0, 90))}${c.text.length > 90 ? '…' : ''}</option>`).join('')}
+    </select>
+    <div data-new-fields style="display:grid;gap:8px">
+      <textarea data-new-text rows="2" placeholder="Comment for the client, e.g. Cable size not per schedule — refer Section 262300 …" style="border:1px solid var(--line2);border-radius:8px;padding:6px 8px;background:var(--panel)"></textarea>
+      <select data-new-status style="border:1px solid var(--line2);border-radius:8px;padding:6px 8px;background:var(--panel);max-width:240px"><option value="fail">Non-compliance</option><option value="unclear">Clarification</option></select>
+    </div>
+    <div style="display:flex;gap:8px"><button class="btn sm primary" data-link-add>${I.check}Add the box</button><button class="btn sm" data-link-cancel>Cancel</button></div>
+  </div>`;
+  f.querySelector('[data-new-text]').focus();
+}
+function closeLink() { S.pendingBox?.el.remove(); S.pendingBox = null; const f = $('#markForm'); if (f) f.innerHTML = ''; }
+async function updateDraft(t) {
+  const comments = S.comments.filter(c => c.text.trim()).map(({ orig, locs, ...c }) => c);
+  t.disabled = true; t.textContent = 'Updating…';
+  try { await api('generate', { comments, decision: S.decision, engineer: S.engineer, final: false }); } catch (err) { t.disabled = false; return toast('Error: ' + esc(err.message), 6000); }
+  const page = S.page;
+  await load(); S.stamp = Date.now(); S.pdf = null; S.dirty = false; S.page = page;
+  $('#view').innerHTML = wsView(); drawPage();
+  toast('Draft updated — your boxes are drawn on the PDF');
 }
 
 function rulesTab() {
@@ -336,9 +415,28 @@ function accuracyTab() {
 
 /* ---------------- events ---------------- */
 ROOT.addEventListener('click', async e => {
-  const t = e.target.closest('[data-go],[data-tab],[data-run-sample],[data-view-page],[data-page],[data-step],[data-zoom],[data-del],[data-revert],[data-add],[data-kind],[data-panel],[data-close],[data-generate],[data-apply-rules],[data-open-rules]');
+  const t = e.target.closest('[data-marking],[data-draft],[data-unmark],[data-link-add],[data-link-cancel],[data-go],[data-tab],[data-run-sample],[data-view-page],[data-page],[data-step],[data-zoom],[data-del],[data-revert],[data-add],[data-kind],[data-panel],[data-close],[data-generate],[data-apply-rules],[data-open-rules]');
   if (!t) return;
   const d = t.dataset;
+  if (d.marking !== undefined) { S.marking = !S.marking; closeLink(); $('#view').innerHTML = wsView(); drawPage(); return; }
+  if (d.draft !== undefined) return updateDraft(t);
+  if (d.unmark) { const [ci, mi] = d.unmark.split(':').map(Number); S.comments[ci].marks.splice(mi, 1); S.dirty = true; $('#view').innerHTML = wsView(); drawPage(); return; }
+  if (d.linkCancel !== undefined) return closeLink();
+  if (d.linkAdd !== undefined) {
+    const to = $('[data-link-to]').value, box = { page: S.pendingBox.page, bbox: S.pendingBox.bbox };
+    let c;
+    if (to === 'new') {
+      const text = $('[data-new-text]').value.trim();
+      if (!text) return $('[data-new-text]').focus();
+      c = { text, manual: true, status: $('[data-new-status]').value, clause: 'Engineer', panels: [], pages: [], marks: [] };
+      S.comments.push(c);
+    } else c = S.comments[+to];
+    c.marks = [...(c.marks || []), box];
+    c.pages = [...new Set([...(c.pages || []), box.page])];
+    S.dirty = true; S.pendingBox.el.remove(); S.pendingBox = null;
+    $('#view').innerHTML = wsView(); drawPage();
+    return toast('Box added — press "Update draft" to draw it on the PDF');
+  }
   if (d.go) { if (!S.data.review) return; S.view = 'ws'; render(); }
   else if (d.runSample !== undefined) { e.preventDefault(); runReview(null); }
   else if (d.openRules !== undefined) { if (!S.data.review) return toast('Run a review first to see rules in action'); S.view = 'ws'; S.tab = 'rules'; render(); }
@@ -350,7 +448,7 @@ ROOT.addEventListener('click', async e => {
     const i = Math.max(0, pages.indexOf(S.page)); S.page = pages[Math.min(pages.length - 1, Math.max(0, i + +d.step))];
     $('#view').innerHTML = wsView(); drawPage();
   }
-  else if (d.zoom) { S.zoom = Math.min(3, Math.max(0.5, S.zoom + +d.zoom)); $('#zoomv').textContent = Math.round(S.zoom * 100) + '%'; drawPage(); }
+  else if (d.zoom) { S.zoom = Math.min(3, Math.max(0.5, S.zoom + +d.zoom)); $('#zoomv').textContent = Math.round(S.zoom * 100) + '%'; closeLink(); drawPage(); }
   else if (d.del) { S.comments.splice(+d.del, 1); render(); }
   else if (d.revert) { const c = S.comments[+d.revert]; c.text = c.orig; render(); }
   else if (d.add) { S.comments.push({ text: '', manual: true, status: 'fail', clause: 'Engineer', panels: [], pages: [] }); render(); setTimeout(() => [...ROOT.querySelectorAll('[data-cmt]')].pop()?.focus(), 30); }
@@ -365,7 +463,7 @@ ROOT.addEventListener('click', async e => {
     render(); toast(`Re-checked · ${S.data.review.stats.fail} non-compliances · ${S.comments.length} comments`);
   }
   else if (d.generate !== undefined) {
-    const comments = S.comments.filter(c => c.text.trim()).map(({ orig, ...c }) => c);
+    const comments = S.comments.filter(c => c.text.trim()).map(({ orig, locs, ...c }) => c);
     t.disabled = true; t.innerHTML = 'Generating…';
     try { await api('generate', { comments, decision: S.decision, engineer: S.engineer }); } catch (err) { toast('Error: ' + esc(err.message), 6000); t.disabled = false; t.innerHTML = `${I.check}Approve &amp; generate`; return; }
     // the page around it (decision, report, sending) now reflects the approved PDF
@@ -396,6 +494,8 @@ ROOT.addEventListener('change', e => {
       toast(S.hide ? 'Client details hidden — drawings redacted' : 'Client details visible');
     });
   }
+  if (t.dataset.linkTo !== undefined) $('[data-new-fields]').style.display = t.value === 'new' ? 'grid' : 'none';
+  if (t.dataset.goto !== undefined) { const n = Math.min(S.data.review.pageCount, Math.max(1, +t.value || 1)); S.page = n; closeLink(); $('#view').innerHTML = wsView(); drawPage(); }
   if (t.id === 'decision') { S.decision = t.value; t.className = /Revise|Reject/.test(t.value) ? 'revise' : ''; }
   if (t.dataset.issues !== undefined) { S.filter.issues = t.checked; render(); }
   if (t.id === 'file' && t.files[0]) runReview(t.files[0]);

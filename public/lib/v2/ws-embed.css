@@ -195,3 +195,6 @@
 .ws { min-width: 0; max-width: 100%; overflow: hidden; }
 .ws .viewer > *, .ws .canvas-wrap { min-width: 0; }
 .ws .canvas-box { max-width: 100%; }
+/* the form that links a drawn box to a comment */
+.ws #markForm select, .ws #markForm textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+.ws #markForm .card { min-width: 0; }

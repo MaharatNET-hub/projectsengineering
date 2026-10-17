@@ -3,7 +3,12 @@
 <section class="card pad ws" id="ws" dir="ltr">
   <div class="ws-bar">
     <h2>{{ $title ?? __('File check against the category criteria') }} <span class="mute" style="font-weight:500;font-size:13px">· {{ $sub->category?->t('name') ?? __('default criteria') }}</span></h2>
-    <div class="user"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      @if ($sub->review() && \App\Http\Controllers\V2\Admin\SubmissionController::canEdit($sub))
+        <form method="post" action="{{ route('v2.admin.submissions.restart', $sub) }}" onsubmit="return confirm('{{ __('Read the whole file again and draft the comments again? Your edits and boxes on this check are replaced.') }}')">@csrf<button class="btn" style="padding:6px 10px;font-size:13px">{{ __('Re-read the file') }}</button></form>
+      @endif
+      <div class="user"></div>
+    </div>
   </div>
   <div id="view"><div class="mute" style="padding:30px;text-align:center">{{ __('Loading the check…') }}</div></div>
   <div id="toast" class="toast" hidden></div>

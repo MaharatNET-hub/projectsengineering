@@ -2,14 +2,17 @@
   use App\V2\Site;
   $unread = \App\Models\V2\Message::whereNull('read_at')->count();
   $me = auth()->user();
-  $waiting = \App\Http\Controllers\V2\Admin\SubmissionController::visible($me)->whereIn('status', ['received', 'analysing', 'review'])->count();
+  $waiting = \App\Http\Controllers\V2\Admin\SubmissionController::visible($me)->standalone()->whereIn('status', ['received', 'analysing', 'review'])->count();
   $studies = \App\Models\V2\Study::whereIn('status', ['submitted', 'review'])->when(! $me->isAdmin(), fn ($q) => $q->where(fn ($w) => $w->whereNull('assigned_to')->orWhere('assigned_to', $me->id)))->count();
+  // studies are the requests from the website; file-only submittals (the earlier upload form) appear only while some exist
   $items = [
     ['v2.admin.dashboard', 'dash', __('Dashboard'), null, 'v2.admin.dashboard'],
-    ['v2.admin.submissions', 'inbox', $me->isAdmin() ? __('Submissions') : __('My requests'), $waiting, 'v2.admin.submissions*'],
-    ['v2.admin.studies', 'clipboard', __('Studies (form)'), $studies, 'v2.admin.studies', 'v2.admin.studies.show'],
-    ['v2.admin.studies.stats', 'chart', __('Statistics'), null, 'v2.admin.studies.stats'],
+    ['v2.admin.studies', 'clipboard', __('Studies'), $studies, 'v2.admin.studies', 'v2.admin.studies.show'],
   ];
+  if (\App\Models\V2\Submission::standalone()->exists()) {
+    $items[] = ['v2.admin.submissions', 'inbox', __('File-only submittals'), $waiting, 'v2.admin.submissions*'];
+  }
+  $items[] = ['v2.admin.studies.stats', 'chart', __('Statistics'), null, 'v2.admin.studies.stats'];
   if ($me->isAdmin()) {
     $items[] = ['v2.admin.messages', 'mail', __('Messages'), $unread, 'v2.admin.messages*'];
     $items[] = ['v2.admin.clients', 'user', __('Clients'), null, 'v2.admin.clients'];

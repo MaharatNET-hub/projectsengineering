@@ -22,6 +22,8 @@ class CategoryController extends Controller
     {
         $open = Submission::whereIn('status', ['received', 'analysing', 'review'])->whereNotNull('category_id')->selectRaw('category_id, count(*) as n')->groupBy('category_id')->pluck('n', 'category_id');
 
+        // a specification dropped in storage/app/seed/specs is taken as soon as the list is opened
+        Category::whereNull('spec_file')->get()->each->adoptSeedSpec();
         $categories = Category::with('engineers')->withCount('submissions')->orderBy('sort')->orderBy('id')->get();
         $types = StudyTypes::all();
         // study types no active category takes: their files reach no engineer and no criteria
